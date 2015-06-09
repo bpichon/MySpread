@@ -1,7 +1,7 @@
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 
-public class Philosopher extends Thread implements
+public class Philosopher extends UnicastRemoteObject implements Runnable,
 		IPhilosopher {
 
 	/**
@@ -18,6 +18,8 @@ public class Philosopher extends Thread implements
 	private final int id;
 	private State state;
 	private boolean isSuspended = false;
+	
+	private Thread thread;
 
 	private final IClient client;
 	private ISeat seat;
@@ -30,7 +32,7 @@ public class Philosopher extends Thread implements
 		this.id = id;
 		this.seat = null;
 		state = State.SEARCHING;
-		//UnicastRemoteObject.exportObject(this);
+		thread = new Thread(this);
 	}
 
 	@Override
@@ -39,19 +41,19 @@ public class Philosopher extends Thread implements
 			State nextState = null;
 			if (state == State.SLEEPING) {
 				try {
-					sleep(sleepingTime);
+					thread.sleep(sleepingTime);
 				} catch (InterruptedException e) {e.printStackTrace();}
 				nextState = State.SEARCHING;
 				
 			} else if (state == State.MEDITATING) {
 				try {
-					sleep(meditatingTime);
+					thread.sleep(meditatingTime);
 				} catch (InterruptedException e) {e.printStackTrace();}
 				nextState = State.SEARCHING;
 				
 			} else if (state == State.LOCKED) {
 				try {
-					sleep(lockingTime);
+					thread.sleep(lockingTime);
 				} catch (InterruptedException e) {e.printStackTrace();}
 				nextState = State.SEARCHING; // TODO: vllt auch waiting.
 				
@@ -106,7 +108,7 @@ public class Philosopher extends Thread implements
 		final State nextState;
 		checkSuspend();
 		try {
-			sleep(eatingTime); // isst
+			thread.sleep(eatingTime); // isst
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -143,6 +145,11 @@ public class Philosopher extends Thread implements
 	}
 
 	@Override
+	public int getId() throws RemoteException {
+		return id;
+	}
+
+	@Override
 	public String toString() {
 		int clientId;
 		try {
@@ -154,6 +161,11 @@ public class Philosopher extends Thread implements
 		return "Ph("+id+")["+clientId+"]";
 	}
 	
+	@Override
+	public String toMyString() throws RemoteException {
+		return toString();
+	}
+	
 	static enum State {
 		MEDITATING, SLEEPING, SEARCHING, /*WAITING,*/SITTING, LOCKED
 	}
@@ -163,4 +175,29 @@ public class Philosopher extends Thread implements
 	public void setSuspended(boolean isSuspended) throws RemoteException {
 		this.isSuspended = isSuspended;		
 	}
+
+	@Override
+	public void start() throws RemoteException {
+		thread.start();
+	}
+
+	@Override
+	public boolean isAlive() throws RemoteException {
+		return thread.isAlive();
+	}
+	
+	@Override
+	public boolean equals(Object other) {
+		if (other instanceof IPhilosopher) {
+			try {
+				final IPhilosopher otherPhilosopher = ((IPhilosopher) other);
+				return getClient().getId() == otherPhilosopher.getClient().getId() 
+						&& getId() == otherPhilosopher.getId();
+			} catch (RemoteException e) {
+				return false;
+			}
+		}
+		return false;
+	}
+
 }

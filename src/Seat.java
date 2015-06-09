@@ -35,7 +35,7 @@ public class Seat extends UnicastRemoteObject implements ISeat {
 		synchronized (queue) {
 			if (lock.tryLock()) {
 				this.philosopher = philosopher;
-				System.out.println(philosopher.toString() + " hat sich gerade hingesetzt. (direkt) | " + this);
+				System.out.println(philosopher.toMyString() + " hat sich gerade hingesetzt. (direkt) | " + this);
 				return -1;
 			}
 			return queue.size();
@@ -50,19 +50,20 @@ public class Seat extends UnicastRemoteObject implements ISeat {
 			// FIXME: remove Exception
 			throw new RuntimeException("kann eigentlich nicht sein!");
 		}
-		System.out.println(philosopher.toString() + " hat sich gerade hingesetzt. (über Warteschlange) | " + this);
+		System.out.println(philosopher.toMyString() + " hat sich gerade hingesetzt. (über Warteschlange) | " + this);
 		queue.remove(philosopher);
 		this.philosopher = philosopher;
 	}
 	
 	@Override
 	public void standUp(IPhilosopher philosopher) throws RemoteException {
+		
 		if (this.philosopher == null || !this.philosopher.equals(philosopher)) {
 			// FIXME: remove Exception
 			throw new RuntimeException("kann eigentlich nicht sein!");
 		}
 		this.philosopher = null;
-		System.out.println(philosopher.toString() + " ist gerade aufgestanden. | " + this);
+		System.out.println(philosopher.toMyString() + " ist gerade aufgestanden. | " + this);
 		lock.unlock();
 	}
 	
