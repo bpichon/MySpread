@@ -5,11 +5,13 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
-import java.util.Random;
 
 public class Client extends UnicastRemoteObject implements IClient {
 
-	private static final long serialVersionUID = 1L;
+	/**
+	 * Serial-Id
+	 */
+	private static final long serialVersionUID = -4568230290539841571L;
 
 	public IServer server;
 

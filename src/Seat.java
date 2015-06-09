@@ -1,11 +1,15 @@
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class Seat extends UnicastRemoteObject implements ISeat {
 
+	/**
+	 * Serial-Id 
+	 */
+	private static final long serialVersionUID = 6574990956188001831L;
+	
 	private final IClient client;
 	private final int id;
 	private final ReentrantLock lock;

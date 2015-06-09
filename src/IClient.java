@@ -3,7 +3,7 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
 
-public interface IClient extends Remote {
+public interface IClient extends Remote, Serializable {
 
 	public void updateClients(ArrayList<IClient> clients)
 			throws RemoteException;

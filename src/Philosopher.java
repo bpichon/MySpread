@@ -1,15 +1,14 @@
-import java.io.Serializable;
 import java.rmi.RemoteException;
-import java.rmi.server.UnicastRemoteObject;
-import java.util.Random;
 
-public class Philosopher extends Thread implements Serializable,
+public class Philosopher extends Thread implements
 		IPhilosopher {
 
-	public static final int sleepingTime = 10;
+	/**
+	 * Serial-Id
+	 */
+	private static final long serialVersionUID = 2139005198749593791L;
 
-	private static final long serialVersionUID = 1L;
-	private static final Random RANDOM = new Random();
+	public static final int sleepingTime = 10;
 
 	public final int lockingTime = 10_000;
 	public final int meditatingTime = 10;
@@ -22,7 +21,6 @@ public class Philosopher extends Thread implements Serializable,
 	private ISeat seat;
 	private int eatCounter = 0;
 
-	private boolean suspended = false;
 	private boolean cancelled = false;
 
 	public Philosopher(IClient client, int id) throws RemoteException {

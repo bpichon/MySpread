@@ -7,8 +7,11 @@ import java.util.Scanner;
 
 public class Server extends UnicastRemoteObject implements IServer {
 
-	private static final long serialVersionUID = 1L;
-	
+	/**
+	 * Serial-Id
+	 */
+	private static final long serialVersionUID = 7217773203069485717L;
+
 	protected Server() throws RemoteException {
 		super();
 	}
