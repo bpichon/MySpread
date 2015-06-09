@@ -8,4 +8,8 @@ public interface IPhilosopher extends Remote, Serializable {
 
 	public void start() throws RemoteException;
 
+	public void setSuspended(boolean isSuspended) throws RemoteException;
+
+	public boolean isAlive() throws RemoteException;
+
 }

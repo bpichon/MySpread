@@ -18,15 +18,11 @@ public class Server extends UnicastRemoteObject implements IServer {
 
 	ArrayList<IClient> connectedClients = new ArrayList<>();
 
-	// Supermaster supermaster;
-	// TODO: Liste mit Clients und deren Sitz und Philos.-Anzahl!
-
 	public static void main(String... args) throws RemoteException {
 		Registry registry;
 		try {
 			System.out.println("create RemoteObject");
 			IServer stub = new Server();
-			// wirft java.rmi.RemoteException
 
 			LocateRegistry.createRegistry(9030);
 			registry = LocateRegistry.getRegistry(9030);
@@ -66,7 +62,7 @@ public class Server extends UnicastRemoteObject implements IServer {
 			connectedClients.add(client);
 			System.out.println("old Client added");
 		}
-		/*
+
 		// Alle anhalten
 		for (IClient eachClient : connectedClients) {
 			eachClient.pause();
@@ -78,7 +74,8 @@ public class Server extends UnicastRemoteObject implements IServer {
 		System.out.println("all Clients updated");
 		for (IClient eachClient : connectedClients) {
 			eachClient.resume();
-		}*/
+		}
+		
 		System.out.println("all Clients resumed");
 		return true;
 	}

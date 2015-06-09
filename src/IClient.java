@@ -12,9 +12,6 @@ public interface IClient extends Remote, Serializable {
 
 	public void start() throws RemoteException;
 
-	// public void setTimer(int eatingTimer, int mediatingTimer, int sleepTimer, int lockTimer)
-	// throws RemoteException;
-
 	enum Direction {
 		LEFT, RIGHT
 	}
@@ -22,4 +19,10 @@ public interface IClient extends Remote, Serializable {
 	public ArrayList<ISeat> getSeats() throws RemoteException;
 
 	public ArrayList<IClient> getAllClients() throws RemoteException;
+
+	public void pause() throws RemoteException;
+
+	public void resume() throws RemoteException;
+
+	void addSuspendedPhilosopher(IPhilosopher philosopher) throws InterruptedException, RemoteException;
 }

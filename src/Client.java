@@ -17,6 +17,7 @@ public class Client extends UnicastRemoteObject implements IClient {
 
 	private ArrayList<IClient> allClients = new ArrayList<>();
 	private ArrayList<IPhilosopher> philosophers = new ArrayList<>();
+	private ArrayList<IPhilosopher> suspendedPhilosophers = new ArrayList<>();
 	private ArrayList<ISeat> seats = new ArrayList<>();
 
 	private int id;
@@ -73,12 +74,13 @@ public class Client extends UnicastRemoteObject implements IClient {
 	public void updateClients(ArrayList<IClient> clients)
 			throws RemoteException {
 
+		allClients = clients;
 		// Gabeln umbiegen
 		int indexRightNeighbor = (allClients.indexOf(this) + 1)
 				% allClients.size();
 		System.out.println("der gewählte rechte Nachbar ist "
 				+ allClients.get(indexRightNeighbor));
-		
+		System.err.println("neue Anzahl: " + clients.size());
 		// TODO: Linke Gabel des rechten Nachbarns als rechte des letzten Sitzes verwenden 
 		
 	}
@@ -93,6 +95,46 @@ public class Client extends UnicastRemoteObject implements IClient {
 	@Override
 	public int getId() {
 		return id;
+	}
+
+	@Override
+	public ArrayList<ISeat> getSeats() throws RemoteException {
+		return seats;
+	}
+
+	@Override
+	public ArrayList<IClient> getAllClients() throws RemoteException {
+		return allClients;
+	}
+
+	@Override
+	public void pause() throws RemoteException {
+		suspendedPhilosophers.clear();
+		for (IPhilosopher philosopher : philosophers) {
+			if (philosopher.isAlive()) {
+				philosopher.setSuspended(true);
+			}
+		}
+	}
+
+	@Override
+	public void resume() throws RemoteException {
+		for (IPhilosopher philosopher : philosophers) {
+			philosopher.setSuspended(false);
+		}
+		for (IPhilosopher suspendedPhilosopher : suspendedPhilosophers) {
+			synchronized (suspendedPhilosopher) {
+				suspendedPhilosopher.notify();
+			}
+		}
+	}
+	
+	@Override
+	public void addSuspendedPhilosopher(IPhilosopher philosopher) throws InterruptedException, RemoteException {
+		synchronized (philosopher) {
+			suspendedPhilosophers.add(philosopher);
+			philosopher.wait();
+		}
 	}
 
 	@Override
@@ -111,16 +153,4 @@ public class Client extends UnicastRemoteObject implements IClient {
 		}
 		return false;
 	}
-
-
-	@Override
-	public ArrayList<ISeat> getSeats() throws RemoteException {
-		return seats;
-	}
-
-	@Override
-	public ArrayList<IClient> getAllClients() throws RemoteException {
-		return allClients;
-	}
-
 }

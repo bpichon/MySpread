@@ -1,4 +1,5 @@
 import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
 
 public class Philosopher extends Thread implements
 		IPhilosopher {
@@ -16,6 +17,7 @@ public class Philosopher extends Thread implements
 	
 	private final int id;
 	private State state;
+	private boolean isSuspended = false;
 
 	private final IClient client;
 	private ISeat seat;
@@ -87,7 +89,10 @@ public class Philosopher extends Thread implements
 		/* Einmal remote durch alle Clients und Sitze nach freien Plätzen suchen. */
 		for (IClient remoteClient : client.getAllClients()) {
 			for (ISeat remoteSeat : remoteClient.getSeats()) {
-				remoteSeat.tryToSitDown(this);
+				if (remoteSeat.tryToSitDown(this) < 0) {
+					seat = remoteSeat;
+					return;
+				}
 			}
 		}
 		
@@ -98,8 +103,8 @@ public class Philosopher extends Thread implements
 	}
 
 	private void eatAndStandUp() {
-		final State nextState;		
-		
+		final State nextState;
+		checkSuspend();
 		try {
 			sleep(eatingTime); // isst
 		} catch (InterruptedException e) {
@@ -118,6 +123,18 @@ public class Philosopher extends Thread implements
 		} catch (RemoteException e) {e.printStackTrace();}
 		seat = null;
 		state = nextState;
+	}
+	
+	private boolean checkSuspend() {
+		if (isSuspended) {
+			try {
+				client.addSuspendedPhilosopher(this);
+			} catch (RemoteException | InterruptedException e) {
+				e.printStackTrace();
+			}
+			return true;
+		}
+		return false;
 	}
 
 	@Override
@@ -142,4 +159,8 @@ public class Philosopher extends Thread implements
 	}
 
 
+	@Override
+	public void setSuspended(boolean isSuspended) throws RemoteException {
+		this.isSuspended = isSuspended;		
+	}
 }
