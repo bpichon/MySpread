@@ -13,17 +13,24 @@ public class Seat extends UnicastRemoteObject implements ISeat {
 	private final IClient client;
 	private final int id;
 	private final Semaphore lock;
+	
+	private Object forkMonitor;
+	private IFork leftFork;
+	private IFork rightFork;
 
 	ArrayList<Object> queue;
 	private IPhilosopher philosopher; 
 	
-	public Seat(IClient client, int id) throws RemoteException {
+	public Seat(IClient client, IFork leftFork, IFork rightFork, int id) throws RemoteException {
 		super();
 		this.client = client;
+		this.leftFork = leftFork;
+		this.rightFork = rightFork;
 		this.id = id;
 		lock = new Semaphore(1);
 		philosopher = null;
 		queue = new ArrayList<>();
+		forkMonitor = new Object();
 	}
 	
 	/**
@@ -121,5 +128,46 @@ public class Seat extends UnicastRemoteObject implements ISeat {
 	@Override
 	public String toMyString() throws RemoteException {
 		return toString();
+	}
+	
+	@Override
+	public void setRightFork(IFork fork) throws RemoteException {
+		synchronized (forkMonitor) {
+			if (rightFork != null) {
+				rightFork.release(this);
+			}
+			rightFork = fork;
+		}
+	}
+	
+	/**
+	 * Nimmt beiden Gabeln. Bei beenfigung hat dieser Sitz garantiert zwei Gabeln.
+	 * @throws RemoteException
+	 */
+	@Override
+	public void takeBothForks() throws RemoteException {
+		synchronized (forkMonitor) {
+			while (!leftFork.tryTake(this) || rightFork.tryTake(this)) {
+				releaseBothForks();
+				Thread.yield(); // TODO: oder sleep(20);
+			}
+		}
+	}
+	
+	/**
+	 * Gibt die Gabeln wieder frei, so sie von diesem Sitz reserviert wurden.
+	 * @return true, falls beide erfolgreich released wurden, false falls nur eine oder keine. (Weil sie nicht von dieser Gabel besetzt waren)
+	 * @throws RemoteException
+	 */
+	@Override
+	public boolean releaseBothForks() throws RemoteException {
+		synchronized (forkMonitor) {
+			return leftFork.release(this) && rightFork.release(this);
+		}
+	}
+
+	@Override
+	public IFork getLeftFork() throws RemoteException {
+		return leftFork;
 	}
 }

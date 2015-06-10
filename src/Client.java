@@ -21,6 +21,7 @@ public class Client extends UnicastRemoteObject implements IClient {
 	private ArrayList<IPhilosopher> philosophers = new ArrayList<>();
 	private ArrayList<IPhilosopher> suspendedPhilosophers = new ArrayList<>();
 	private ArrayList<ISeat> seats = new ArrayList<>();
+	private ArrayList<IFork> forks = new ArrayList<>();
 
 	private int id;
 
@@ -32,11 +33,15 @@ public class Client extends UnicastRemoteObject implements IClient {
 		for (int i = 0; i < philosopherAmount; i++) {
 			philosophers.add(new Philosopher(this, i));
 		}
-		// TODO: seats erstellen
+		
 		for (int i = 0; i < seatAmount; i++) {
-			seats.add((ISeat) new Seat(this, i));
+			forks.add(new Fork(this, i));
 		}
-		// TODO: gabeln erstellen
+		
+		for (int i = 0; i < seatAmount; i++) {
+			// Der letzte Seat bekommt als rechte Gabel eine null. Diese wird später in registerClient noch umgebogen.
+			seats.add((ISeat) new Seat(this, forks.get(i), ((i + 1) == seatAmount) ? null : forks.get(i + 1) ,i));
+		}
 		
 		tableMaster = new TableMaster(this);
 	};
@@ -88,13 +93,16 @@ public class Client extends UnicastRemoteObject implements IClient {
 			throws RemoteException {
 
 		// Gabeln umbiegen
-		/*int indexRightNeighbor = (allClients.indexOf(this) + 1)
+		int indexRightNeighbor = (allClients.indexOf(this) + 1)
 				% allClients.size();
 		System.out.println("der gewählte rechte Nachbar ist "
 				+ allClients.get(indexRightNeighbor));
-		System.err.println("neue Anzahl: " + clients.length);*/
-		// TODO: Linke Gabel des rechten Nachbarns als rechte des letzten Sitzes verwenden 
+		System.err.println("neue Anzahl: " + allClients.size());
 		
+		// Linke Gabel des rechten Nachbarns als rechte des letzten Sitzes verwenden
+		IFork leftForkOfRightNeighbor = allClients.get(indexRightNeighbor).getSeat(0).getLeftFork(); // Linkester Sitz
+		getSeat(getSeats().size() - 1).setRightFork(leftForkOfRightNeighbor);
+		System.out.println("finished Update Client");
 	}
 
 	@Override

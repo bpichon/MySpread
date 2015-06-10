@@ -1,0 +1,91 @@
+import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
+import java.util.concurrent.Semaphore;
+
+
+public class Fork extends UnicastRemoteObject implements IFork {
+	
+	/**
+	 * Serial-Id
+	 */
+	private static final long serialVersionUID = -5449152050028093584L;
+	
+	private IClient client;
+	private int id;
+	
+	private Semaphore lock;
+	private ISeat seat;
+	
+	public Fork(IClient client, int id) throws RemoteException {
+		super();
+		this.client = client;
+		this.id = id;
+		seat = null;
+		lock = new Semaphore(1);
+	}
+	
+	/**
+	 * Besetzt die Gabel wenn frei, ansonsten gibt sie false zurück.
+	 * @param seat Der Sitz, für die die Gabel besetzt wird.
+	 * @return true, wenn die Gabel besetzt werden konnte - false ansonsten.
+	 */
+	@Override
+	public boolean tryTake(ISeat seat) throws RemoteException {
+		if (lock.tryAcquire()) {
+			this.seat = seat;
+			return true;
+		}
+		return false;
+	}
+	
+	/**
+	 * Gibt die Gabel wieder frei, wenn der Seat auch der besetzende ist.
+	 * @param seat der besetzende Sitz
+	 * @return true, wenn freigegeben wurde, false ansonsten
+	 */
+	@Override
+	public boolean release(ISeat seat) throws RemoteException {
+		if (this.seat != null && this.seat.equals(seat)) {
+			lock.release();
+			this.seat = null;
+			return true;
+		}
+		return false;
+	}
+	
+	@Override
+	public String toString() {
+		int clientId;
+		try {
+			clientId = client.getId();
+		} catch (RemoteException e) {
+			clientId = -1;
+		}
+		
+		return "Se("+id+")["+clientId+"]";
+	}
+	
+	@Override
+	public boolean equals(Object other) {
+		if (other instanceof IFork) {
+			try {
+				final IFork otherSeat = ((IFork) other);
+				return getClient().equals(otherSeat.getClient()) 
+						&& getId() == otherSeat.getId();
+			} catch (RemoteException e) {
+				return false;
+			}
+		}
+		return false;
+	}
+
+	@Override
+	public IClient getClient() throws RemoteException {
+		return client;
+	}
+	
+	@Override
+	public int getId() throws RemoteException {
+		return id;
+	}
+}

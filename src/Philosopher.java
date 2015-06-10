@@ -11,8 +11,8 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 	public static final int sleepingTime = 10;
 
 	public final int lockingTime = 10_000;
-	public final int meditatingTime = 1000;
-	public final int eatingTime = 1000;
+	public final int meditatingTime = 100;
+	public final int eatingTime = 10;
 	
 	private Thread thread;
 	
@@ -130,6 +130,11 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 	private void eatAndStandUp() {
 		final State nextState;
 		checkSuspend();
+		do {
+			try {
+				seat.takeBothForks(); // Nachdem suspended wurde Gabeln wieder neu holen
+			} catch (RemoteException e) {e.printStackTrace();}
+		} while(checkSuspend());
 		try {
 			thread.sleep(eatingTime); // isst
 			try {
@@ -157,6 +162,7 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 	private boolean checkSuspend() {
 		if (isSuspended) {
 			try {
+				seat.releaseBothForks();
 				client.addSuspendedPhilosopher(this);
 			} catch (RemoteException | InterruptedException e) {
 				e.printStackTrace();

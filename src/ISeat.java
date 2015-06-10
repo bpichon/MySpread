@@ -17,4 +17,13 @@ public interface ISeat extends Remote {
 
 	String toMyString() throws RemoteException;
 
+	void takeBothForks() throws RemoteException;
+
+	boolean releaseBothForks() throws RemoteException;
+
+	IFork getLeftFork() throws RemoteException;
+
+	void setRightFork(IFork fork) throws RemoteException;
+
+
 }
