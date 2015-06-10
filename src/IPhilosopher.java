@@ -12,7 +12,7 @@ public interface IPhilosopher extends Remote, Serializable {
 
 	public boolean isAlive() throws RemoteException;
 
-	public int getId() throws RemoteException;
+	public int getMyId() throws RemoteException;
 
 	String toMyString() throws RemoteException;
 

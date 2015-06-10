@@ -8,6 +8,8 @@ public interface ISeat extends Remote, Serializable {
 
 	void sitOrWait(IPhilosopher philosopher) throws RemoteException;;
 
-	void standUp(IPhilosopher philosopher) throws RemoteException;;
+	void standUp(IPhilosopher philosopher) throws RemoteException;
+
+	IPhilosopher getPhilosopher() throws RemoteException;
 
 }

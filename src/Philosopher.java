@@ -1,8 +1,7 @@
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 
-public class Philosopher extends UnicastRemoteObject implements Runnable,
-		IPhilosopher {
+public class Philosopher extends Thread implements IPhilosopher {
 
 	/**
 	 * Serial-Id
@@ -12,14 +11,13 @@ public class Philosopher extends UnicastRemoteObject implements Runnable,
 	public static final int sleepingTime = 10;
 
 	public final int lockingTime = 10_000;
-	public final int meditatingTime = 10;
+	public final int meditatingTime = 1000;
 	public final int eatingTime = 1000;
 	
 	private final int id;
 	private State state;
 	private boolean isSuspended = false;
 	
-	private Thread thread;
 
 	private final IClient client;
 	private ISeat seat;
@@ -32,28 +30,32 @@ public class Philosopher extends UnicastRemoteObject implements Runnable,
 		this.id = id;
 		this.seat = null;
 		state = State.SEARCHING;
-		thread = new Thread(this);
+		UnicastRemoteObject.exportObject(this, 0);
 	}
 
 	@Override
 	public void run() {
 		while (!cancelled) {
+			if (seat != null) {
+				// FIXME: remove me
+				throw new RuntimeException("WARUM??");
+			}
 			State nextState = null;
 			if (state == State.SLEEPING) {
 				try {
-					thread.sleep(sleepingTime);
+					sleep(sleepingTime);
 				} catch (InterruptedException e) {e.printStackTrace();}
 				nextState = State.SEARCHING;
 				
 			} else if (state == State.MEDITATING) {
 				try {
-					thread.sleep(meditatingTime);
+					sleep(meditatingTime);
 				} catch (InterruptedException e) {e.printStackTrace();}
 				nextState = State.SEARCHING;
 				
 			} else if (state == State.LOCKED) {
 				try {
-					thread.sleep(lockingTime);
+					sleep(lockingTime);
 				} catch (InterruptedException e) {e.printStackTrace();}
 				nextState = State.SEARCHING; // TODO: vllt auch waiting.
 				
@@ -100,6 +102,10 @@ public class Philosopher extends UnicastRemoteObject implements Runnable,
 		
 		/* An lokalen Sitz mit kürzester Schlange einreihen. */
 		localShortestSeat.sitOrWait(this); // kehrt erst zurück, wenn er tatsächlich am Platz SITZT
+		if (localShortestSeat.getPhilosopher() == null) {
+			// FIXME: remove me
+			throw new RuntimeException("WARUM??");
+		}
 		seat = localShortestSeat;
 		return; // Der Philosoph sitzt zu diesem Zeitpunkt garantiert an einem Sitz.
 	}
@@ -108,7 +114,7 @@ public class Philosopher extends UnicastRemoteObject implements Runnable,
 		final State nextState;
 		checkSuspend();
 		try {
-			thread.sleep(eatingTime); // isst
+			sleep(eatingTime); // isst
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -119,7 +125,6 @@ public class Philosopher extends UnicastRemoteObject implements Runnable,
 			nextState = State.SLEEPING;
 		}
 		// Fertig gegessen, Stuhl kann wieder freigegeben werden.
-		
 		try {
 			seat.standUp(this);
 		} catch (RemoteException e) {e.printStackTrace();}
@@ -145,7 +150,7 @@ public class Philosopher extends UnicastRemoteObject implements Runnable,
 	}
 
 	@Override
-	public int getId() throws RemoteException {
+	public int getMyId() throws RemoteException {
 		return id;
 	}
 
@@ -176,23 +181,14 @@ public class Philosopher extends UnicastRemoteObject implements Runnable,
 		this.isSuspended = isSuspended;		
 	}
 
-	@Override
-	public void start() throws RemoteException {
-		thread.start();
-	}
-
-	@Override
-	public boolean isAlive() throws RemoteException {
-		return thread.isAlive();
-	}
 	
 	@Override
 	public boolean equals(Object other) {
 		if (other instanceof IPhilosopher) {
 			try {
 				final IPhilosopher otherPhilosopher = ((IPhilosopher) other);
-				return getClient().getId() == otherPhilosopher.getClient().getId() 
-						&& getId() == otherPhilosopher.getId();
+				return getClient().equals(otherPhilosopher.getClient()) 
+						&& getMyId() == otherPhilosopher.getMyId();
 			} catch (RemoteException e) {
 				return false;
 			}

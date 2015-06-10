@@ -34,6 +34,10 @@ public class Seat extends UnicastRemoteObject implements ISeat {
 	public int tryToSitDown(IPhilosopher philosopher) throws RemoteException {
 		synchronized (queue) {
 			if (lock.tryLock()) {
+				if (this.philosopher != null) {
+					// FIXME: remove Exception
+					//throw new RuntimeException("kann eigentlich nicht sein!##1 - " + this.philosopher.toMyString() + " - " + this);
+				}
 				this.philosopher = philosopher;
 				System.out.println(philosopher.toMyString() + " hat sich gerade hingesetzt. (direkt) | " + this);
 				return -1;
@@ -57,10 +61,9 @@ public class Seat extends UnicastRemoteObject implements ISeat {
 	
 	@Override
 	public void standUp(IPhilosopher philosopher) throws RemoteException {
-		
 		if (this.philosopher == null || !this.philosopher.equals(philosopher)) {
 			// FIXME: remove Exception
-			throw new RuntimeException("kann eigentlich nicht sein!");
+			throw new RuntimeException("kann eigentlich nicht sein! " + this.philosopher.toMyString() + " | " + philosopher.toMyString() + "  ||  " + this);
 		}
 		this.philosopher = null;
 		System.out.println(philosopher.toMyString() + " ist gerade aufgestanden. | " + this);
@@ -77,5 +80,11 @@ public class Seat extends UnicastRemoteObject implements ISeat {
 		}
 		
 		return "Se("+id+")["+clientId+"]";
+	}
+
+	@Override
+	public IPhilosopher getPhilosopher() throws RemoteException {
+		// FIXME: remove me
+		return philosopher;
 	}
 }
