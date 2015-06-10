@@ -32,7 +32,6 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 		this.id = id;
 		this.seat = null;
 		state = State.SEARCHING;
-		//UnicastRemoteObject.exportObject(this, 0);
 		thread = new Thread(this);
 	}
 
@@ -78,32 +77,30 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 		/* Einmal lokal durchlaufen und nach freien Plätzen suchen. Gleichzeitig die kürzeste Schlange suchen. */ 
 		ISeat localShortestSeat = null;
 		int localShortestQueue = Integer.MAX_VALUE;
-		synchronized (this) {
-			for (ISeat localSeat : client.getSeats()) {
-				final int currentLength = localSeat.tryToSitDown(this);
-				if (currentLength < 0) {
-					// der Philosoph hat sich hingestetzt.
-					seat = localSeat;
-					assert localSeat.getPhilosopher().equals(this) : "Philosoph wurde soeben zugewiesen, also muss er sich auch auf dem Stuhl befinden";
-					return;
-				} else if (currentLength < localShortestQueue) {
-					localShortestSeat = localSeat;
-					localShortestQueue = currentLength;
-				}
+		for (ISeat localSeat : client.getSeats()) {
+			final int currentLength = localSeat.tryToSitDown(this);
+			if (currentLength < 0) {
+				// der Philosoph hat sich hingestetzt.
+				seat = localSeat;
+				assert localSeat.getPhilosopher().equals(this) : "Philosoph wurde soeben zugewiesen, also muss er sich auch auf dem Stuhl befinden";
+				return;
+			} else if (currentLength < localShortestQueue) {
+				localShortestSeat = localSeat;
+				localShortestQueue = currentLength;
 			}
-			
-			/* Einmal remote durch alle Clients und Sitze nach freien Plätzen suchen. */
-			for (IClient remoteClient : client.getAllClients()) {
-				if (remoteClient.equals(client)) continue;
-				for (int i = 0; i < remoteClient.getSeats().size(); i++) {
-					final ISeat remoteSeat = remoteClient.getSeat(i);
-					final int currentLength = remoteSeat.tryToSitDown(this);
-					if (currentLength < 0) {
-						// der Philosoph hat sich remote hingestetzt.
-						seat = remoteSeat;
-						assert this.equals(remoteSeat.getPhilosopher()) : "Dieser Sitz ist durch diesen Philosophen besetzt!";
-						return;
-					}
+		}
+		
+		/* Einmal remote durch alle Clients und Sitze nach freien Plätzen suchen. */
+		for (IClient remoteClient : client.getAllClients()) {
+			if (remoteClient.equals(client)) continue;
+			for (int i = 0; i < remoteClient.getSeats().size(); i++) {
+				final ISeat remoteSeat = remoteClient.getSeat(i);
+				final int currentLength = remoteSeat.tryToSitDown(this);
+				if (currentLength < 0) {
+					// der Philosoph hat sich remote hingestetzt.
+					seat = remoteSeat;
+					assert this.equals(remoteSeat.getPhilosopher()) : "Dieser Sitz ist durch diesen Philosophen besetzt!";
+					return;
 				}
 			}
 		}
