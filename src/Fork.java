@@ -62,7 +62,7 @@ public class Fork extends UnicastRemoteObject implements IFork {
 			clientId = -1;
 		}
 		
-		return "Se("+id+")["+clientId+"]";
+		return "Fo("+id+")["+clientId+"]";
 	}
 	
 	@Override

@@ -1,3 +1,4 @@
+import java.lang.Thread.State;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 
@@ -22,5 +23,7 @@ public interface IPhilosopher extends Remote {
 	public void lock() throws RemoteException;
 
 	boolean isLocked() throws RemoteException;
+
+	public State getState() throws RemoteException;
 
 }
