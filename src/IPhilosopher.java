@@ -15,4 +15,12 @@ public interface IPhilosopher extends Remote {
 
 	String toMyString() throws RemoteException;
 
+	public Integer getEatingCounter() throws RemoteException;
+
+	public Integer getEatingTimeFactor() throws RemoteException;
+
+	public void lock() throws RemoteException;
+
+	boolean isLocked() throws RemoteException;
+
 }

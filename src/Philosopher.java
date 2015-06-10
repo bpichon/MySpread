@@ -19,6 +19,7 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 	private final int id;
 	private State state;
 	private boolean isSuspended = false;
+	private boolean isLocked = false;
 	
 
 	private final IClient client;
@@ -28,6 +29,7 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 	private boolean cancelled = false;
 
 	public Philosopher(IClient client, int id) throws RemoteException {
+		super();
 		this.client = client;
 		this.id = id;
 		this.seat = null;
@@ -40,6 +42,12 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 		while (!cancelled) {
 			assert seat == null : "Zu dieser Zeit darf der Philosoph keinen Seat zugewiesen haben.";
 			State nextState = null;
+			
+			if (isLocked) {
+				// Client bzw Server haben diesen Philosophen gelockt.
+				state = State.LOCKED;
+			}
+			
 			if (state == State.SLEEPING) {
 				try {
 					thread.sleep(sleepingTime);
@@ -56,6 +64,7 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 				try {
 					thread.sleep(lockingTime);
 				} catch (InterruptedException e) {e.printStackTrace();}
+				isLocked = false;
 				nextState = State.SEARCHING; // TODO: vllt auch waiting.
 				
 			} else {
@@ -218,6 +227,27 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 	@Override
 	public boolean isAlive() throws RemoteException {
 		return thread.isAlive();
+	}
+
+	@Override
+	public Integer getEatingCounter() throws RemoteException {
+		return eatCounter;
+	}
+
+	@Override
+	public Integer getEatingTimeFactor() throws RemoteException {
+		// TODO return correct value
+		return 1;
+	}
+
+	@Override
+	public void lock() throws RemoteException {
+		isLocked = true;
+	}
+	
+	@Override
+	public boolean isLocked() throws RemoteException {
+		return isLocked;
 	}
 
 }

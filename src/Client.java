@@ -14,6 +14,8 @@ public class Client extends UnicastRemoteObject implements IClient {
 	private static final long serialVersionUID = -4568230290539841571L;
 
 	public IServer server;
+	
+	private TableMaster tableMaster;
 
 	private ArrayList<IClient> allClients = new ArrayList<>();
 	private ArrayList<IPhilosopher> philosophers = new ArrayList<>();
@@ -25,6 +27,7 @@ public class Client extends UnicastRemoteObject implements IClient {
 	// Anpassung auf die übergebene Anzahl an Philosphen und Plätzen
 	public Client(int id, int philosopherAmount, int seatAmount)
 			throws RemoteException {
+		super();
 		this.id = id;
 		for (int i = 0; i < philosopherAmount; i++) {
 			philosophers.add(new Philosopher(this, i));
@@ -34,6 +37,8 @@ public class Client extends UnicastRemoteObject implements IClient {
 			seats.add((ISeat) new Seat(this, i));
 		}
 		// TODO: gabeln erstellen
+		
+		tableMaster = new TableMaster(this);
 	};
 
 	/**
@@ -97,6 +102,8 @@ public class Client extends UnicastRemoteObject implements IClient {
 		for (IPhilosopher philosopher : philosophers) {
 			philosopher.start();
 		}
+		
+		tableMaster.start();
 	}
 
 	@Override
@@ -169,5 +176,23 @@ public class Client extends UnicastRemoteObject implements IClient {
 	@Override
 	public ISeat getSeat(int i) throws RemoteException {
 		return seats.get(i);
+	}
+
+	@Override
+	public ArrayList<IPhilosopher> getPhilosophers() throws RemoteException {
+		return philosophers;
+	}
+
+	@Override
+	public ITableMaster getTableMaster() throws RemoteException {
+		return tableMaster;
+	}
+
+	@Override
+	public void lock(IPhilosopher currentPhilosopher) throws RemoteException {
+		// FIXME: kann sein, dass das hier keine Referenz, sondern nur eine Kopie ist (von currPhiloso)
+		if (!currentPhilosopher.isLocked()) {
+			currentPhilosopher.lock();
+		}
 	}
 }

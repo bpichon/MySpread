@@ -18,6 +18,7 @@ public class Seat extends UnicastRemoteObject implements ISeat {
 	private IPhilosopher philosopher; 
 	
 	public Seat(IClient client, int id) throws RemoteException {
+		super();
 		this.client = client;
 		this.id = id;
 		lock = new Semaphore(1);

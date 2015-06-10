@@ -31,4 +31,10 @@ public interface IClient extends Remote {
 	void addClient(IClient client) throws RemoteException;
 
 	void clearClients() throws RemoteException;
+
+	public ArrayList<IPhilosopher> getPhilosophers() throws RemoteException;
+
+	public ITableMaster getTableMaster() throws RemoteException;
+
+	public void lock(IPhilosopher currentPhilosopher) throws RemoteException;
 }
