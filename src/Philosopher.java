@@ -92,6 +92,7 @@ public class Philosopher extends Thread implements IPhilosopher {
 		
 		/* Einmal remote durch alle Clients und Sitze nach freien Plätzen suchen. */
 		for (IClient remoteClient : client.getAllClients()) {
+			if (remoteClient.equals(client)) continue;
 			for (ISeat remoteSeat : remoteClient.getSeats()) {
 				if (remoteSeat.tryToSitDown(this) < 0) {
 					seat = remoteSeat;
