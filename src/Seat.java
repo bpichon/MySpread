@@ -16,7 +16,7 @@ public class Seat extends UnicastRemoteObject implements ISeat {
 	private final int id;
 	private final ReentrantLock lock;
 
-	ArrayList<IPhilosopher> queue;
+	ArrayList<Object> queue;
 	private IPhilosopher philosopher; 
 	
 	public Seat(IClient client, int id) throws RemoteException {
@@ -33,56 +33,44 @@ public class Seat extends UnicastRemoteObject implements ISeat {
 	 */
 	@Override
 	public int tryToSitDown(IPhilosopher philosopher) throws RemoteException {
-		if (this.philosopher != null) {
+		synchronized (lock) {
+			if (lock.tryLock()) {
+				assert this.philosopher == null : "Philosopher dieses Platzes muss 'null' sein, da er gerade neu besetzt wurde.";
+				this.philosopher = philosopher;
+				System.out.println(philosopher.toMyString() + " hat sich gerade hingesetzt. (direkt) | " + this);
+				return -1;
+			}
 			return queue.size();
 		}
-		if (lock.tryLock()) {
-			if (this.philosopher != null) {
-				// FIXME: remove Exception
-				throw new RuntimeException("kann eigentlich nicht sein!##1 - " + this.philosopher.toMyString() + " - " + this);
-				//System.out.println("kann eigentlich nicht sein!##1 - " + this.philosopher.toMyString() + " - " + this);
-			}
-			this.philosopher = philosopher;
-			System.out.println(philosopher.toMyString() + " hat sich gerade hingesetzt. (direkt) | " + this);
-			return -1;
-		}
-		return queue.size();
 	}
 	
 	@Override
-	public void sitOrWait(IPhilosopher philosopher) throws RemoteException {
+	public boolean sitOrWait(IPhilosopher philosopher) throws RemoteException {
 		System.out.println(philosopher.toMyString() + " zur  Warteschlange hinzugefügt | " + this);
-		queue.add(philosopher);
-		lock.lock();
-		if (this.philosopher != null) {
-			// FIXME: remove Exception
-			throw new RuntimeException("kann eigentlich nicht sein!");
+		synchronized (lock) {
+			queue.add(new Object());
 		}
-		System.out.println(philosopher.toMyString() + " hat sich gerade hingesetzt. (über Warteschlange) | " + this);
-		queue.remove(philosopher);
-		this.philosopher = philosopher;
+		lock.lock();
+		synchronized (lock) {
+			assert this.philosopher == null : "Philosopher dieses Platzes muss 'null' sein, da er gerade neu besetzt wurde.";
+			System.out.println(philosopher.toMyString() + " hat sich gerade hingesetzt. (über Warteschlange) | " + this);
+			this.philosopher = philosopher;
+			queue.remove(0);
+			return true;
+		}
 	}
 	
 	@Override
-	public void standUp(IPhilosopher philosopher) throws RemoteException {
+	public boolean standUp(IPhilosopher philosopher) throws RemoteException {
 		synchronized (lock) {
-			IPhilosopher temp = this.philosopher;
-			if (philosopher == null) {
-				System.out.println("NULLLLLLL");
-			}
-			if (philosopher == null || this.philosopher == null) {
-				throw new RuntimeException("thread E: " + this.philosopher.toMyString() );
-			}
-	
 			this.philosopher = null;
 			System.out.println(philosopher.toMyString() + " ist gerade aufgestanden. | " + this);
-			try {
-				System.out.println("DEBUG! " + temp.toMyString() + " | " + philosopher.toMyString() + "  ||  " + this + " ||| " + Thread.currentThread());
-				lock.unlock();
-			} catch (IllegalMonitorStateException ex) {
-				ex.printStackTrace();
-			}
+			
+			lock.unlock();
+			
 		}
+		assert !Thread.holdsLock(lock) : "Thread darf nicht mehr owner des Locks sein.";
+		return true;
 	}
 	
 	@Override

@@ -5,9 +5,9 @@ public interface ISeat extends Remote {
 
 	int tryToSitDown(IPhilosopher philosopher) throws RemoteException;
 
-	void sitOrWait(IPhilosopher philosopher) throws RemoteException;;
+	boolean sitOrWait(IPhilosopher philosopher) throws RemoteException;;
 
-	void standUp(IPhilosopher philosopher) throws RemoteException;
+	boolean standUp(IPhilosopher philosopher) throws RemoteException;
 
 	IPhilosopher getPhilosopher() throws RemoteException;
 

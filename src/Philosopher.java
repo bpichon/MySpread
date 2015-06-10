@@ -39,10 +39,7 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 	@Override
 	public void run() {
 		while (!cancelled) {
-			if (seat != null) {
-				// FIXME: remove me
-				throw new RuntimeException("WARUM??");
-			}
+			assert seat == null : "Zu dieser Zeit darf der Philosoph keinen Seat zugewiesen haben.";
 			State nextState = null;
 			if (state == State.SLEEPING) {
 				try {
@@ -87,12 +84,7 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 				if (currentLength < 0) {
 					// der Philosoph hat sich hingestetzt.
 					seat = localSeat;
-					if (!localSeat.getPhilosopher().equals(this)) {
-						// FIXME: remove me
-						throw new RuntimeException("WARUM????5");
-					} else {
-						System.err.println(this.toMyString() + "Seat found.");
-					}
+					assert localSeat.getPhilosopher().equals(this) : "Philosoph wurde soeben zugewiesen, also muss er sich auch auf dem Stuhl befinden";
 					return;
 				} else if (currentLength < localShortestQueue) {
 					localShortestSeat = localSeat;
@@ -109,30 +101,22 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 					if (currentLength < 0) {
 						// der Philosoph hat sich remote hingestetzt.
 						seat = remoteSeat;
-						if (!this.equals(remoteSeat.getPhilosopher())) {
-							// FIXME: remove me
-							System.out.println("ERROR: " + remoteSeat.getPhilosopher().toMyString() + " | " + this.toMyString());
-							throw new RuntimeException("WARUM????7");
-						} else {
-							System.err.println(this.toMyString() + "Seat found.");
-						}
+						assert this.equals(remoteSeat.getPhilosopher()) : "Dieser Sitz ist durch diesen Philosophen besetzt!";
 						return;
 					}
 				}
 			}
 		}
 		
-		if (seat != null) {
-			// FIXME: remove me
-			throw new RuntimeException("WARUM????8");
-		}
+		assert seat == null : "Seat des Philosophen muss nach erfolgloser erster Suche null sein.";
+		assert localShortestSeat != null : "LocalShortestSeat kann nicht null sein.";
 		
 		/* An lokalen Sitz mit kürzester Schlange einreihen. */
 		localShortestSeat.sitOrWait(this); // kehrt erst zurück, wenn er tatsächlich am Platz SITZT
-		if (localShortestSeat.getPhilosopher() == null) {
-			// FIXME: remove me
-			throw new RuntimeException("WARUM??");
-		}
+		
+		assert localShortestSeat.getPhilosopher() != null : "Nachdem der Sitz besetzt wurde, kann der Philosoph auf dem Stuhl nicht 'null' sein!";
+		assert this.equals(localShortestSeat.getPhilosopher()) : "Nachdem der Sitz besetzt wurde, muss der Philosoph auf dem Stuhl dieser sein!";
+		
 		seat = localShortestSeat;
 		return; // Der Philosoph sitzt zu diesem Zeitpunkt garantiert an einem Sitz.
 	}
