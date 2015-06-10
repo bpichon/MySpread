@@ -1,12 +1,8 @@
-import java.io.Serializable;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
 
-public interface IClient extends Remote, Serializable {
-
-	public void updateClients(ArrayList<IClient> clients)
-			throws RemoteException;
+public interface IClient extends Remote {
 
 	public int getId() throws RemoteException;
 
@@ -27,4 +23,12 @@ public interface IClient extends Remote, Serializable {
 	void addSuspendedPhilosopher(IPhilosopher philosopher) throws InterruptedException, RemoteException;
 
 	String toMyString() throws RemoteException;
+
+	public ISeat getSeat(int i) throws RemoteException;
+
+	void updateClients() throws RemoteException;
+
+	void addClient(IClient client) throws RemoteException;
+
+	void clearClients() throws RemoteException;
 }

@@ -1,8 +1,7 @@
-import java.io.Serializable;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 
-public interface ISeat extends Remote, Serializable {
+public interface ISeat extends Remote {
 
 	int tryToSitDown(IPhilosopher philosopher) throws RemoteException;
 

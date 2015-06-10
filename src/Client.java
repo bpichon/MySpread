@@ -66,24 +66,28 @@ public class Client extends UnicastRemoteObject implements IClient {
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
-
 	}
 
-
 	@Override
-	public void updateClients(ArrayList<IClient> clients)
+	public void clearClients() throws RemoteException {
+		allClients.clear();
+	}
+	
+	@Override
+	public void addClient(IClient client) throws RemoteException {
+		allClients.add(client);
+	}
+	
+	@Override
+	public void updateClients()
 			throws RemoteException {
 
-		allClients.clear();
-		for(IClient client : clients) {
-			allClients.add(client);
-		}
 		// Gabeln umbiegen
-		int indexRightNeighbor = (allClients.indexOf(this) + 1)
+		/*int indexRightNeighbor = (allClients.indexOf(this) + 1)
 				% allClients.size();
 		System.out.println("der gewählte rechte Nachbar ist "
 				+ allClients.get(indexRightNeighbor));
-		System.err.println("neue Anzahl: " + clients.size());
+		System.err.println("neue Anzahl: " + clients.length);*/
 		// TODO: Linke Gabel des rechten Nachbarns als rechte des letzten Sitzes verwenden 
 		
 	}
@@ -147,6 +151,7 @@ public class Client extends UnicastRemoteObject implements IClient {
 
 	@Override
 	public boolean equals(Object other) {
+		System.out.println("EQUALS CLINET");
 		if (other instanceof IClient) {
 			try {
 				return this.getId() == ((IClient) other).getId();
@@ -160,5 +165,10 @@ public class Client extends UnicastRemoteObject implements IClient {
 	@Override
 	public String toMyString() throws RemoteException {
 		return toString();
+	}
+
+	@Override
+	public ISeat getSeat(int i) throws RemoteException {
+		return seats.get(i);
 	}
 }

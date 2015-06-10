@@ -1,7 +1,7 @@
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 
-public class Philosopher extends Thread implements IPhilosopher {
+public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Runnable {
 
 	/**
 	 * Serial-Id
@@ -13,6 +13,8 @@ public class Philosopher extends Thread implements IPhilosopher {
 	public final int lockingTime = 10_000;
 	public final int meditatingTime = 1000;
 	public final int eatingTime = 1000;
+	
+	private Thread thread;
 	
 	private final int id;
 	private State state;
@@ -30,7 +32,8 @@ public class Philosopher extends Thread implements IPhilosopher {
 		this.id = id;
 		this.seat = null;
 		state = State.SEARCHING;
-		UnicastRemoteObject.exportObject(this, 0);
+		//UnicastRemoteObject.exportObject(this, 0);
+		thread = new Thread(this);
 	}
 
 	@Override
@@ -43,19 +46,19 @@ public class Philosopher extends Thread implements IPhilosopher {
 			State nextState = null;
 			if (state == State.SLEEPING) {
 				try {
-					sleep(sleepingTime);
+					thread.sleep(sleepingTime);
 				} catch (InterruptedException e) {e.printStackTrace();}
 				nextState = State.SEARCHING;
 				
 			} else if (state == State.MEDITATING) {
 				try {
-					sleep(meditatingTime);
+					thread.sleep(meditatingTime);
 				} catch (InterruptedException e) {e.printStackTrace();}
 				nextState = State.SEARCHING;
 				
 			} else if (state == State.LOCKED) {
 				try {
-					sleep(lockingTime);
+					thread.sleep(lockingTime);
 				} catch (InterruptedException e) {e.printStackTrace();}
 				nextState = State.SEARCHING; // TODO: vllt auch waiting.
 				
@@ -78,39 +81,43 @@ public class Philosopher extends Thread implements IPhilosopher {
 		/* Einmal lokal durchlaufen und nach freien Plätzen suchen. Gleichzeitig die kürzeste Schlange suchen. */ 
 		ISeat localShortestSeat = null;
 		int localShortestQueue = Integer.MAX_VALUE;
-		for (ISeat localSeat : client.getSeats()) {
-			final int currentLength = localSeat.tryToSitDown(this);
-			if (currentLength < 0) {
-				// der Philosoph hat sich hingestetzt.
-				seat = localSeat;
-				if (!localSeat.getPhilosopher().equals(this)) {
-					// FIXME: remove me
-					throw new RuntimeException("WARUM????5");
-				} else {
-					System.err.println(this.toMyString() + "Seat found.");
-				}
-				return;
-			} else if (currentLength < localShortestQueue) {
-				localShortestSeat = localSeat;
-				localShortestQueue = currentLength;
-			}
-		}
-		
-		/* Einmal remote durch alle Clients und Sitze nach freien Plätzen suchen. */
-		for (IClient remoteClient : client.getAllClients()) {
-			if (remoteClient.equals(client)) continue;
-			for (ISeat remoteSeat : remoteClient.getSeats()) {
-				final int currentLength = remoteSeat.tryToSitDown(this);
+		synchronized (this) {
+			for (ISeat localSeat : client.getSeats()) {
+				final int currentLength = localSeat.tryToSitDown(this);
 				if (currentLength < 0) {
-					// der Philosoph hat sich remote hingestetzt.
-					seat = remoteSeat;
-					if (!remoteSeat.getPhilosopher().equals(this)) {
+					// der Philosoph hat sich hingestetzt.
+					seat = localSeat;
+					if (!localSeat.getPhilosopher().equals(this)) {
 						// FIXME: remove me
-						throw new RuntimeException("WARUM????7");
+						throw new RuntimeException("WARUM????5");
 					} else {
 						System.err.println(this.toMyString() + "Seat found.");
 					}
 					return;
+				} else if (currentLength < localShortestQueue) {
+					localShortestSeat = localSeat;
+					localShortestQueue = currentLength;
+				}
+			}
+			
+			/* Einmal remote durch alle Clients und Sitze nach freien Plätzen suchen. */
+			for (IClient remoteClient : client.getAllClients()) {
+				if (remoteClient.equals(client)) continue;
+				for (int i = 0; i < remoteClient.getSeats().size(); i++) {
+					final ISeat remoteSeat = remoteClient.getSeat(i);
+					final int currentLength = remoteSeat.tryToSitDown(this);
+					if (currentLength < 0) {
+						// der Philosoph hat sich remote hingestetzt.
+						seat = remoteSeat;
+						if (!this.equals(remoteSeat.getPhilosopher())) {
+							// FIXME: remove me
+							System.out.println("ERROR: " + remoteSeat.getPhilosopher().toMyString() + " | " + this.toMyString());
+							throw new RuntimeException("WARUM????7");
+						} else {
+							System.err.println(this.toMyString() + "Seat found.");
+						}
+						return;
+					}
 				}
 			}
 		}
@@ -134,7 +141,7 @@ public class Philosopher extends Thread implements IPhilosopher {
 		final State nextState;
 		checkSuspend();
 		try {
-			sleep(eatingTime); // isst
+			thread.sleep(eatingTime); // isst
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -204,6 +211,7 @@ public class Philosopher extends Thread implements IPhilosopher {
 	
 	@Override
 	public boolean equals(Object other) {
+		System.out.println("EQUALS PHILO");
 		if (other instanceof IPhilosopher) {
 			try {
 				final IPhilosopher otherPhilosopher = ((IPhilosopher) other);
@@ -214,6 +222,17 @@ public class Philosopher extends Thread implements IPhilosopher {
 			}
 		}
 		return false;
+	}
+
+	@Override
+	public void start() throws RemoteException {
+		thread.start();
+		
+	}
+
+	@Override
+	public boolean isAlive() throws RemoteException {
+		return thread.isAlive();
 	}
 
 }

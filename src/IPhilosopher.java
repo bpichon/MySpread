@@ -1,8 +1,7 @@
-import java.io.Serializable;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 
-public interface IPhilosopher extends Remote, Serializable {
+public interface IPhilosopher extends Remote {
 
 	public IClient getClient() throws RemoteException;
 
