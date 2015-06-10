@@ -126,6 +126,11 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 		checkSuspend();
 		try {
 			thread.sleep(eatingTime); // isst
+			try {
+				System.out.println(this + " hat gerade gegessen. Auf Stuhl: " + seat.toMyString());
+			} catch (RemoteException e) {
+				e.printStackTrace();
+			}
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -195,7 +200,6 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 	
 	@Override
 	public boolean equals(Object other) {
-		System.out.println("EQUALS PHILO");
 		if (other instanceof IPhilosopher) {
 			try {
 				final IPhilosopher otherPhilosopher = ((IPhilosopher) other);

@@ -151,7 +151,6 @@ public class Client extends UnicastRemoteObject implements IClient {
 
 	@Override
 	public boolean equals(Object other) {
-		System.out.println("EQUALS CLINET");
 		if (other instanceof IClient) {
 			try {
 				return this.getId() == ((IClient) other).getId();

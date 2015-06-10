@@ -1,9 +1,7 @@
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
-import java.util.concurrent.locks.ReentrantLock;
-
-import javax.management.RuntimeErrorException;
+import java.util.concurrent.Semaphore;
 
 public class Seat extends UnicastRemoteObject implements ISeat {
 
@@ -14,7 +12,7 @@ public class Seat extends UnicastRemoteObject implements ISeat {
 	
 	private final IClient client;
 	private final int id;
-	private final ReentrantLock lock;
+	private final Semaphore lock;
 
 	ArrayList<Object> queue;
 	private IPhilosopher philosopher; 
@@ -22,7 +20,7 @@ public class Seat extends UnicastRemoteObject implements ISeat {
 	public Seat(IClient client, int id) throws RemoteException {
 		this.client = client;
 		this.id = id;
-		lock = new ReentrantLock();
+		lock = new Semaphore(1);
 		philosopher = null;
 		queue = new ArrayList<>();
 	}
@@ -34,7 +32,7 @@ public class Seat extends UnicastRemoteObject implements ISeat {
 	@Override
 	public int tryToSitDown(IPhilosopher philosopher) throws RemoteException {
 		synchronized (lock) {
-			if (lock.tryLock()) {
+			if (lock.tryAcquire()) {
 				assert this.philosopher == null : "Philosopher dieses Platzes muss 'null' sein, da er gerade neu besetzt wurde.";
 				this.philosopher = philosopher;
 				System.out.println(philosopher.toMyString() + " hat sich gerade hingesetzt. (direkt) | " + this);
@@ -50,7 +48,11 @@ public class Seat extends UnicastRemoteObject implements ISeat {
 		synchronized (lock) {
 			queue.add(new Object());
 		}
-		lock.lock();
+		try {
+			lock.acquire();
+		} catch (InterruptedException e) {
+			throw new RuntimeException(e);
+		}
 		synchronized (lock) {
 			assert this.philosopher == null : "Philosopher dieses Platzes muss 'null' sein, da er gerade neu besetzt wurde.";
 			System.out.println(philosopher.toMyString() + " hat sich gerade hingesetzt. (über Warteschlange) | " + this);
@@ -66,7 +68,7 @@ public class Seat extends UnicastRemoteObject implements ISeat {
 			this.philosopher = null;
 			System.out.println(philosopher.toMyString() + " ist gerade aufgestanden. | " + this);
 			
-			lock.unlock();
+			lock.release();
 			
 		}
 		assert !Thread.holdsLock(lock) : "Thread darf nicht mehr owner des Locks sein.";
