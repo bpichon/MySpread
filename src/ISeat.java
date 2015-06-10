@@ -12,4 +12,10 @@ public interface ISeat extends Remote, Serializable {
 
 	IPhilosopher getPhilosopher() throws RemoteException;
 
+	IClient getClient() throws RemoteException;
+
+	int getId() throws RemoteException;
+
+	String toMyString() throws RemoteException;
+
 }

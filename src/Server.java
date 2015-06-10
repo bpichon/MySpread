@@ -64,17 +64,18 @@ public class Server extends UnicastRemoteObject implements IServer {
 		}
 
 		// Alle anhalten
+		/*
 		for (IClient eachClient : connectedClients) {
 			eachClient.pause();
-		}
+		}*/
 		System.out.println("all Clients paused");
 		for (IClient eachClient : connectedClients) {
 			eachClient.updateClients(connectedClients);
-		}
+		}/*
 		System.out.println("all Clients updated");
 		for (IClient eachClient : connectedClients) {
 			eachClient.resume();
-		}
+		}*/
 		
 		System.out.println("all Clients resumed");
 		return true;

@@ -25,4 +25,6 @@ public interface IClient extends Remote, Serializable {
 	public void resume() throws RemoteException;
 
 	void addSuspendedPhilosopher(IPhilosopher philosopher) throws InterruptedException, RemoteException;
+
+	String toMyString() throws RemoteException;
 }

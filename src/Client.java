@@ -31,7 +31,7 @@ public class Client extends UnicastRemoteObject implements IClient {
 		}
 		// TODO: seats erstellen
 		for (int i = 0; i < seatAmount; i++) {
-			seats.add(new Seat(this, i));
+			seats.add((ISeat) new Seat(this, i));
 		}
 		// TODO: gabeln erstellen
 	};
@@ -74,7 +74,10 @@ public class Client extends UnicastRemoteObject implements IClient {
 	public void updateClients(ArrayList<IClient> clients)
 			throws RemoteException {
 
-		allClients = clients;
+		allClients.clear();
+		for(IClient client : clients) {
+			allClients.add(client);
+		}
 		// Gabeln umbiegen
 		int indexRightNeighbor = (allClients.indexOf(this) + 1)
 				% allClients.size();
@@ -152,5 +155,10 @@ public class Client extends UnicastRemoteObject implements IClient {
 			}
 		}
 		return false;
+	}
+	
+	@Override
+	public String toMyString() throws RemoteException {
+		return toString();
 	}
 }

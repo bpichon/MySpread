@@ -83,6 +83,12 @@ public class Philosopher extends Thread implements IPhilosopher {
 			if (currentLength < 0) {
 				// der Philosoph hat sich hingestetzt.
 				seat = localSeat;
+				if (!localSeat.getPhilosopher().equals(this)) {
+					// FIXME: remove me
+					throw new RuntimeException("WARUM????5");
+				} else {
+					System.err.println(this.toMyString() + "Seat found.");
+				}
 				return;
 			} else if (currentLength < localShortestQueue) {
 				localShortestSeat = localSeat;
@@ -92,12 +98,26 @@ public class Philosopher extends Thread implements IPhilosopher {
 		
 		/* Einmal remote durch alle Clients und Sitze nach freien Plätzen suchen. */
 		for (IClient remoteClient : client.getAllClients()) {
+			if (remoteClient.equals(client)) continue;
 			for (ISeat remoteSeat : remoteClient.getSeats()) {
-				if (remoteSeat.tryToSitDown(this) < 0) {
+				final int currentLength = remoteSeat.tryToSitDown(this);
+				if (currentLength < 0) {
+					// der Philosoph hat sich remote hingestetzt.
 					seat = remoteSeat;
+					if (!remoteSeat.getPhilosopher().equals(this)) {
+						// FIXME: remove me
+						throw new RuntimeException("WARUM????7");
+					} else {
+						System.err.println(this.toMyString() + "Seat found.");
+					}
 					return;
 				}
 			}
+		}
+		
+		if (seat != null) {
+			// FIXME: remove me
+			throw new RuntimeException("WARUM????8");
 		}
 		
 		/* An lokalen Sitz mit kürzester Schlange einreihen. */
