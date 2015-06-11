@@ -37,4 +37,9 @@ public interface IClient extends Remote {
 	public ITableMaster getTableMaster() throws RemoteException;
 
 	public void lock(IPhilosopher currentPhilosopher) throws RemoteException;
+
+	void addSeat() throws RemoteException;
+
+	void addPhilospher(int eatCount, int eatingTimeFactor)
+			throws RemoteException;
 }

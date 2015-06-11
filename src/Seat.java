@@ -182,4 +182,9 @@ public class Seat extends UnicastRemoteObject implements ISeat {
 	public IFork getLeftFork() throws RemoteException {
 		return leftFork;
 	}
+
+	@Override
+	public IFork getRightFork() throws RemoteException {
+		return rightFork;
+	}
 }

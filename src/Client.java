@@ -96,7 +96,7 @@ public class Client extends UnicastRemoteObject implements IClient {
 		int indexRightNeighbor = (allClients.indexOf(this) + 1)
 				% allClients.size();
 		System.out.println("der gewählte rechte Nachbar ist "
-				+ allClients.get(indexRightNeighbor));
+				+ allClients.get(indexRightNeighbor).toMyString());
 		System.err.println("neue Anzahl: " + allClients.size());
 		
 		// Linke Gabel des rechten Nachbarns als rechte des letzten Sitzes verwenden
@@ -108,7 +108,9 @@ public class Client extends UnicastRemoteObject implements IClient {
 	@Override
 	public void start() throws RemoteException {
 		for (IPhilosopher philosopher : philosophers) {
-			philosopher.start();
+			if (philosopher.getState() == Thread.State.NEW) {
+				philosopher.start();
+			}
 		}
 		
 		tableMaster.start();
@@ -202,5 +204,25 @@ public class Client extends UnicastRemoteObject implements IClient {
 		if (!currentPhilosopher.isLocked()) {
 			currentPhilosopher.lock();
 		}
+	}
+	
+	/**
+	 * Fügt einen neuen Stuhl und Gabeln ein. Verbiegt die entsprechenden Gabeln auch
+	 * @throws RemoteException
+	 */
+	@Override
+	public void addSeat() throws RemoteException {
+		// Es wird "rechts" eingefügt.
+		final ISeat leftNeighbor = seats.get(seats.size() - 1); // Rechtester Sitz -> Linker Nachbar des neuen Sitzes
+		final IFork newLeftFork = new Fork(this, forks.size());
+		final IFork oldRightFork = leftNeighbor.getRightFork();
+		forks.add(newLeftFork);
+		leftNeighbor.setRightFork(newLeftFork);
+		seats.add(new Seat(this, newLeftFork, oldRightFork, seats.size()));
+	} 
+	
+	@Override
+	public void addPhilospher(int eatCount, int eatingTimeFactor) throws RemoteException {
+		philosophers.add(new Philosopher(this, philosophers.size(), eatingTimeFactor, eatCount));
 	}
 }

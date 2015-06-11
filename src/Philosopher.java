@@ -11,8 +11,8 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 	public static final int sleepingTime = 10;
 
 	public final int lockingTime = 10_000;
-	public final int meditatingTime = 100;
-	public final int eatingTime = 10;
+	public int meditatingTime = 100;
+	public int eatingTime = 10;
 	
 	private Thread thread;
 	
@@ -29,9 +29,20 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 	private boolean cancelled = false;
 
 	public Philosopher(IClient client, int id) throws RemoteException {
+		this(client, id, 0);
+	}
+	
+	public Philosopher(IClient client, int id, int hunger) throws RemoteException {
+		this(client, id, hunger, 0);
+	}
+	
+	public Philosopher(IClient client, int id, int hunger, int eatCounter) throws RemoteException {
 		super();
 		this.client = client;
 		this.id = id;
+		this.eatCounter = eatCounter;
+		eatingTime = eatingTime + hunger;
+		meditatingTime = (meditatingTime - hunger <= 0) ? 1 : meditatingTime - hunger;
 		this.seat = null;
 		state = State.SEARCHING;
 		thread = new Thread(this);
@@ -133,8 +144,14 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 		do {
 			try {
 				seat.takeBothForks(); // Nachdem suspended wurde Gabeln wieder neu holen
-			} catch (RemoteException e) {e.printStackTrace();}
+			} catch (RemoteException | NullPointerException e) {
+				// Wenn Seat null ist, war es ein entfernter Seat, der wegen Clientabsturz weggebrochen ist. 
+				e.printStackTrace();
+			}
 		} while(checkSuspend());
+		try {
+			seat.takeBothForks();
+		} catch (RemoteException e1) {e1.printStackTrace();}
 		try {
 			thread.sleep(eatingTime); // isst
 			try {
@@ -227,7 +244,6 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 	@Override
 	public void start() throws RemoteException {
 		thread.start();
-		
 	}
 
 	@Override
@@ -254,6 +270,11 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 	@Override
 	public boolean isLocked() throws RemoteException {
 		return isLocked;
+	}
+
+	@Override
+	public Thread.State getState() throws RemoteException {
+		return thread.getState(); // TODO: oder nur getState?
 	}
 
 }

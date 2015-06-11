@@ -25,5 +25,7 @@ public interface ISeat extends Remote {
 
 	void setRightFork(IFork fork) throws RemoteException;
 
+	IFork getRightFork() throws RemoteException;
+
 
 }
