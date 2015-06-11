@@ -68,7 +68,7 @@ public class Fork extends UnicastRemoteObject implements IFork {
 	 */
 	@Override
 	public boolean release(ISeat seat) throws RemoteException {
-		synchronized (lock) { // TODO gegebstück
+		synchronized (lock) {
 		if (this.seat != null && this.seat.equals(seat)) {
 				lock.release();
 				System.out.println(seat.toMyString() + " hat Fork freigegeben: " + this.toString());

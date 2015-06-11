@@ -14,6 +14,8 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 	public int meditatingTime = 100;
 	public int eatingTime = 10;
 	
+	public final int hunger;
+	
 	private Thread thread;
 	
 	private final int id;
@@ -41,6 +43,7 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 		this.client = client;
 		this.id = id;
 		this.eatCounter = eatCounter;
+		this.hunger = hunger;
 		eatingTime = eatingTime + hunger;
 		meditatingTime = (meditatingTime - hunger <= 0) ? 1 : meditatingTime - hunger;
 		this.seat = null;
@@ -76,7 +79,7 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 					Thread.sleep(lockingTime);
 				} catch (InterruptedException e) {e.printStackTrace();}
 				isLocked = false;
-				nextState = State.SEARCHING; // TODO: vllt auch waiting.
+				nextState = State.SEARCHING; // möglich auch State.WAITING.
 				
 			} else {
 				// nextState wird in der Methode (standUp) angegeben
@@ -290,8 +293,7 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 
 	@Override
 	public Integer getEatingTimeFactor() throws RemoteException {
-		// TODO return correct value
-		return 1;
+		return hunger;
 	}
 
 	@Override
@@ -306,7 +308,7 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 
 	@Override
 	public Thread.State getState() throws RemoteException {
-		return thread.getState(); // TODO: oder nur getState?
+		return thread.getState();
 	}
 
 }

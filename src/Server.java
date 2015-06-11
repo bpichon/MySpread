@@ -105,6 +105,7 @@ public class Server extends UnicastRemoteObject implements IServer {
 
 	private class SuperTableMaster extends Thread {
 
+		private static final int MAX_EAT_COUNT_DIFF = 10;
 		private static final int interval = 1000;
 		private boolean isRecoveryMode = false;
 		public Map<Integer, IClientStats> allStats = new TreeMap<>();
@@ -133,7 +134,7 @@ public class Server extends UnicastRemoteObject implements IServer {
 		}
 		
 		private void feedbackClients(int min) throws RemoteException {
-			final int greatedAllowedCount = min + 10; // TODO: Konstante
+			final int greatedAllowedCount = min + MAX_EAT_COUNT_DIFF;
 			System.err.println("greatedAllowedCount: " + greatedAllowedCount);
 			for (IClientStats stats : allStats.values()) {
 				for (int i = 0; i < stats.getPhilosophers().size(); i++) {

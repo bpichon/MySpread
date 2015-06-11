@@ -77,7 +77,7 @@ public class Seat extends UnicastRemoteObject implements ISeat {
 			this.philosopher = null;
 			System.out.println(philosopher.toMyString() + " ist gerade aufgestanden. | " + this);
 			releaseBothForks();
-			//TODO: bei nichteinhaltung bricht Ph ab. Bemerkt bei Recovery. assert releasedBoth : "Beide Gabeln müssten released werden, weil beide Gabeln zuvor von diesem Sitz benutzt wurden.";
+			//bei nichteinhaltung bricht Ph ab. Bemerkt bei Recovery. assert releasedBoth : "Beide Gabeln müssten released werden, weil beide Gabeln zuvor von diesem Sitz benutzt wurden.";
 		}
 		assert !Thread.holdsLock(lock) : "Thread darf nicht mehr owner des Locks sein.";
 		return true;
@@ -126,7 +126,6 @@ public class Seat extends UnicastRemoteObject implements ISeat {
 	
 	@Override
 	public IPhilosopher getPhilosopher() throws RemoteException {
-		// FIXME: remove me
 		return philosopher;
 	}
 

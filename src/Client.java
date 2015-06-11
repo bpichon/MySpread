@@ -203,7 +203,6 @@ public class Client extends UnicastRemoteObject implements IClient {
 
 	@Override
 	public void lock(IPhilosopher currentPhilosopher) throws RemoteException {
-		// FIXME: kann sein, dass das hier keine Referenz, sondern nur eine Kopie ist (von currPhiloso)
 		if (!currentPhilosopher.isLocked()) {
 			currentPhilosopher.lock();
 		}
