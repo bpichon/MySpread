@@ -75,6 +75,7 @@ public class Server extends UnicastRemoteObject implements IServer {
 			eachClient.pause();
 		}
 		System.out.println("all Clients paused");
+		client.clearClients();
 		for (IClient eachClient : connectedClients) {
 			for (IClient paramClient : connectedClients) {
 				eachClient.addClient(paramClient);

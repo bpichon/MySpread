@@ -146,12 +146,20 @@ public class Seat extends UnicastRemoteObject implements ISeat {
 	 */
 	@Override
 	public void takeBothForks() throws RemoteException {
-		synchronized (forkMonitor) {
-			while (!leftFork.tryTake(this) || rightFork.tryTake(this)) {
-				releaseBothForks();
-				Thread.yield(); // TODO: oder sleep(20);
+		boolean successful = false;
+		while(!successful) {
+			synchronized (forkMonitor) {
+				if (!leftFork.tryTake(this) || !rightFork.tryTake(this)) {
+					releaseBothForks();
+				} else {
+					successful = true;
+				}
 			}
-		}
+			if (!successful) {
+				Thread.yield(); // TODO: oder sleep.
+ 			}
+ 		}
+
 	}
 	
 	/**
