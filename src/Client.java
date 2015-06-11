@@ -112,8 +112,9 @@ public class Client extends UnicastRemoteObject implements IClient {
 				philosopher.start();
 			}
 		}
-		
-		tableMaster.start();
+		if (tableMaster.getState() == Thread.State.NEW) {
+			tableMaster.start();
+		}
 	}
 
 	@Override
@@ -158,6 +159,7 @@ public class Client extends UnicastRemoteObject implements IClient {
 		synchronized (philosopher) {
 			suspendedPhilosophers.add(philosopher);
 			philosopher.wait();
+			System.out.println(philosopher + "Läuft wieder weiter.");
 		}
 	}
 
@@ -172,6 +174,7 @@ public class Client extends UnicastRemoteObject implements IClient {
 			try {
 				return this.getId() == ((IClient) other).getId();
 			} catch (RemoteException e) {
+				reportRemoteException(e);
 				return false;
 			}
 		}
@@ -215,14 +218,24 @@ public class Client extends UnicastRemoteObject implements IClient {
 		// Es wird "rechts" eingefügt.
 		final ISeat leftNeighbor = seats.get(seats.size() - 1); // Rechtester Sitz -> Linker Nachbar des neuen Sitzes
 		final IFork newLeftFork = new Fork(this, forks.size());
-		final IFork oldRightFork = leftNeighbor.getRightFork();
 		forks.add(newLeftFork);
 		leftNeighbor.setRightFork(newLeftFork);
-		seats.add(new Seat(this, newLeftFork, oldRightFork, seats.size()));
+		seats.add(new Seat(this, newLeftFork, null, seats.size()));
 	} 
 	
 	@Override
 	public void addPhilospher(int eatCount, int eatingTimeFactor) throws RemoteException {
 		philosophers.add(new Philosopher(this, philosophers.size(), eatingTimeFactor, eatCount));
+	}
+	
+	@Override
+	public void reportRemoteException(Exception e) {
+		try {
+			server.recovery();
+			e.printStackTrace();
+		} catch (RemoteException e1) {
+			e1.printStackTrace();
+			// Tue nichts.
+		}
 	}
 }

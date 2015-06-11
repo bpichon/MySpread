@@ -95,7 +95,8 @@ public class Server extends UnicastRemoteObject implements IServer {
 		return true;
 	}
 	
-	public void recovery() {
+	@Override
+	public void recovery() throws RemoteException {
 		superTableMaster.setIsRecoveryMode();
 	}
 	
@@ -112,11 +113,13 @@ public class Server extends UnicastRemoteObject implements IServer {
 		}
 
 		public void collectStats() throws RemoteException {
-			// TODO in eine Kopie schreiben und überspeichern
-			allStats.clear();
-			for (IClient client : connectedClients) {
-				allStats.put(client.getId(), client.getTableMaster().getStats());
+			final Map<Integer, IClientStats> currentClientStats = new TreeMap<Integer, IClientStats>();
+			for (int i = 0; i < connectedClients.size(); i++) {
+				final IClient client = connectedClients.get(i);
+				currentClientStats.put(client.getId(), client.getTableMaster().getStats());
 			}
+			// Erst am Ende überschreiben, damit sichergestellt wird, dass der komplette letzte Stats da ist.
+			allStats = currentClientStats;
 		}
 		
 		private int calculate() throws RemoteException {
@@ -204,6 +207,7 @@ public class Server extends UnicastRemoteObject implements IServer {
 			for (IClient eachClient : connectedClients) {
 				eachClient.pause();
 			}
+			System.out.println("all Clients paused");
 			
 			/* Hole stats dieser Clients und bringe die Seats, Gabeln und Philosophen irgendwo anders unter. */
 			// Gleichmäßig auf Clients aufteilen.
@@ -223,7 +227,6 @@ public class Server extends UnicastRemoteObject implements IServer {
 			}
 			
 			/* Clients Updaten */
-			System.out.println("all Clients paused");
 			for (IClient eachClient : connectedClients) {
 				eachClient.clearClients();
 				for (IClient paramClient : connectedClients) {
@@ -231,9 +234,9 @@ public class Server extends UnicastRemoteObject implements IServer {
 				}
 				eachClient.updateClients();
 			}
+			System.out.println("all Clients updated");
 			
 			/* Weiterlaufen lassen */
-			System.out.println("all Clients updated");
 			for (IClient eachClient : connectedClients) {
 				eachClient.start();
 				eachClient.resume();

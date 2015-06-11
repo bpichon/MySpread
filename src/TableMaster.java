@@ -1,3 +1,4 @@
+import java.lang.Thread.State;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 
@@ -47,12 +48,20 @@ public class TableMaster extends UnicastRemoteObject implements Runnable, ITable
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			} catch (RemoteException e) {
-				e.printStackTrace();
+				try {
+					client.reportRemoteException(e);
+				} catch (RemoteException e1) {
+					e1.printStackTrace();
+				}
 			}
 		}
 	}
 
 	public void start() {
 		thread.start();
+	}
+
+	public State getState() {
+		return thread.getState();
 	}
 }

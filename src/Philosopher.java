@@ -82,7 +82,11 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 				// nextState wird in der Methode (standUp) angegeben
 				try {
 					findSeatAndSit();
-				} catch (RemoteException e) {e.printStackTrace();}
+				} catch (RemoteException e) {try {
+					client.reportRemoteException(e);
+				} catch (RemoteException e1) {
+					e1.printStackTrace();
+				}}
 				// Der Philosoph kann nun zu essen anfangen.
 				eatAndStandUp();
 			}
@@ -148,15 +152,23 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 				seat.takeBothForks(); // Nachdem suspended wurde Gabeln wieder neu holen
 			} catch (RemoteException | NullPointerException e) {
 				// Wenn Seat null ist, war es ein entfernter Seat, der wegen Clientabsturz weggebrochen ist. 
-				e.printStackTrace();
+				try {
+					client.reportRemoteException(e);
+				} catch (RemoteException e1) {
+					e1.printStackTrace();
+				}
 			}
 		} while(checkSuspend());
 		try {
 			thread.sleep(eatingTime); // isst
 			try {
 				System.out.println(this + " hat gerade gegessen. Auf Stuhl: " + seat.toMyString());
-			} catch (RemoteException e) {
-				e.printStackTrace();
+			} catch (RemoteException | NullPointerException e) {
+				try {
+					client.reportRemoteException(e);
+				} catch (RemoteException e1) {
+					e1.printStackTrace();
+				}
 			}
 		} catch (InterruptedException e) {
 			e.printStackTrace();
@@ -170,7 +182,13 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 		// Fertig gegessen, Stuhl kann wieder freigegeben werden.
 		try {
 			seat.standUp(this);
-		} catch (RemoteException e) {e.printStackTrace();}
+		} catch (RemoteException | NullPointerException e) {
+			try {
+				client.reportRemoteException(e);
+			} catch (RemoteException e1) {
+				e1.printStackTrace();
+			}
+		}
 		seat = null;
 		state = nextState;
 	}
@@ -180,8 +198,13 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 			try {
 				seat.releaseBothForks();
 				client.addSuspendedPhilosopher(this);
-			} catch (RemoteException | InterruptedException e) {
-				e.printStackTrace();
+			} catch (RemoteException | InterruptedException | NullPointerException e) {
+				try {
+					client.addSuspendedPhilosopher(this);
+					client.reportRemoteException(e);
+				} catch (RemoteException | InterruptedException e1) {
+					e1.printStackTrace();
+				}
 			}
 			return true;
 		}
@@ -204,6 +227,11 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 		try {
 			clientId = client.getId();
 		} catch (RemoteException e) {
+			try {
+				client.reportRemoteException(e);
+			} catch (RemoteException e1) {
+				e1.printStackTrace();
+			}
 			clientId = -1;
 		}
 		
@@ -234,6 +262,11 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 				return getClient().equals(otherPhilosopher.getClient()) 
 						&& getMyId() == otherPhilosopher.getMyId();
 			} catch (RemoteException e) {
+				try {
+					client.reportRemoteException(e);
+				} catch (RemoteException e1) {
+					e1.printStackTrace();
+				}
 				return false;
 			}
 		}

@@ -9,6 +9,8 @@ public interface IServer extends Remote {
 	 * @param client zu registrierender Client
 	 * @return false, wenn bereits registriert.
 	 */
-	public boolean registerClient(IClient client) throws RemoteException; 
+	public boolean registerClient(IClient client) throws RemoteException;
+
+	void recovery() throws RemoteException; 
 	
 }

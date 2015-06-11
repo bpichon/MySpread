@@ -42,4 +42,6 @@ public interface IClient extends Remote {
 
 	void addPhilospher(int eatCount, int eatingTimeFactor)
 			throws RemoteException;
+
+	void reportRemoteException(Exception e) throws RemoteException;
 }

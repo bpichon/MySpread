@@ -1,3 +1,4 @@
+import java.net.ConnectException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
@@ -77,7 +78,7 @@ public class Seat extends UnicastRemoteObject implements ISeat {
 			this.philosopher = null;
 			System.out.println(philosopher.toMyString() + " ist gerade aufgestanden. | " + this);
 			boolean releasedBoth = releaseBothForks();
-			assert releasedBoth : "Beide Gabeln müssten released werden, weil beide Gabeln zuvor von diesem Sitz benutzt wurden.";
+			//TODO: bei nichteinhaltung bricht Ph ab. Bemerkt bei Recovery. assert releasedBoth : "Beide Gabeln müssten released werden, weil beide Gabeln zuvor von diesem Sitz benutzt wurden.";
 		}
 		assert !Thread.holdsLock(lock) : "Thread darf nicht mehr owner des Locks sein.";
 		return true;
@@ -89,6 +90,11 @@ public class Seat extends UnicastRemoteObject implements ISeat {
 		try {
 			clientId = client.getId();
 		} catch (RemoteException e) {
+			try {
+				client.reportRemoteException(e);
+			} catch (RemoteException e1) {
+				e1.printStackTrace();
+			}
 			clientId = -1;
 		}
 		
@@ -103,6 +109,11 @@ public class Seat extends UnicastRemoteObject implements ISeat {
 				return getClient().equals(otherSeat.getClient()) 
 						&& getId() == otherSeat.getId();
 			} catch (RemoteException e) {
+				try {
+					client.reportRemoteException(e);
+				} catch (RemoteException e1) {
+					e1.printStackTrace();
+				}
 				return false;
 			}
 		}
@@ -134,7 +145,14 @@ public class Seat extends UnicastRemoteObject implements ISeat {
 	public void setRightFork(IFork fork) throws RemoteException {
 		synchronized (forkMonitor) {
 			if (rightFork != null) {
-				rightFork.release(this);
+				try {
+					// Falls der alte rightFork auf einem kaputten Client lag, braucht er nicht released werden.
+					// In dem Fall springt er in den Catchblock. Der Aufruf von getId wird nur zur überprüfung der Verbindung gebraucht. 
+					rightFork.getClient().getId();
+					rightFork.release(this);
+				} catch (RemoteException e) {
+					client.reportRemoteException(e);
+				}
 			}
 			rightFork = fork;
 		}

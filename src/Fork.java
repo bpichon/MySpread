@@ -88,6 +88,11 @@ public class Fork extends UnicastRemoteObject implements IFork {
 			clientId = client.getId();
 		} catch (RemoteException e) {
 			clientId = -1;
+			try {
+				client.reportRemoteException(e);
+			} catch (RemoteException e1) {
+				e1.printStackTrace();
+			}
 		}
 		
 		return "Fo("+id+")["+clientId+"]";
@@ -106,6 +111,11 @@ public class Fork extends UnicastRemoteObject implements IFork {
 				return getClient().equals(otherSeat.getClient()) 
 						&& getId() == otherSeat.getId();
 			} catch (RemoteException e) {
+				try {
+					client.reportRemoteException(e);
+				} catch (RemoteException e1) {
+					e1.printStackTrace();
+				}
 				return false;
 			}
 		}
