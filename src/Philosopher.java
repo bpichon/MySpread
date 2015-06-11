@@ -61,19 +61,19 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 			
 			if (state == State.SLEEPING) {
 				try {
-					thread.sleep(sleepingTime);
+					Thread.sleep(sleepingTime);
 				} catch (InterruptedException e) {e.printStackTrace();}
 				nextState = State.SEARCHING;
 				
 			} else if (state == State.MEDITATING) {
 				try {
-					thread.sleep(meditatingTime);
+					Thread.sleep(meditatingTime);
 				} catch (InterruptedException e) {e.printStackTrace();}
 				nextState = State.SEARCHING;
 				
 			} else if (state == State.LOCKED) {
 				try {
-					thread.sleep(lockingTime);
+					Thread.sleep(lockingTime);
 				} catch (InterruptedException e) {e.printStackTrace();}
 				isLocked = false;
 				nextState = State.SEARCHING; // TODO: vllt auch waiting.
@@ -160,7 +160,7 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 			}
 		} while(checkSuspend());
 		try {
-			thread.sleep(eatingTime); // isst
+			Thread.sleep(eatingTime); // isst
 			try {
 				System.out.println(this + " hat gerade gegessen. Auf Stuhl: " + seat.toMyString());
 			} catch (RemoteException | NullPointerException e) {

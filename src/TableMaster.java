@@ -43,7 +43,7 @@ public class TableMaster extends UnicastRemoteObject implements Runnable, ITable
 	public void run() {
 		while(!thread.isInterrupted()) {
 			try {
-				thread.sleep(interval);
+				Thread.sleep(interval);
 				collectStats();
 			} catch (InterruptedException e) {
 				e.printStackTrace();

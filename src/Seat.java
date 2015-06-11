@@ -1,4 +1,3 @@
-import java.net.ConnectException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
@@ -77,7 +76,7 @@ public class Seat extends UnicastRemoteObject implements ISeat {
 			lock.release();
 			this.philosopher = null;
 			System.out.println(philosopher.toMyString() + " ist gerade aufgestanden. | " + this);
-			boolean releasedBoth = releaseBothForks();
+			releaseBothForks();
 			//TODO: bei nichteinhaltung bricht Ph ab. Bemerkt bei Recovery. assert releasedBoth : "Beide Gabeln müssten released werden, weil beide Gabeln zuvor von diesem Sitz benutzt wurden.";
 		}
 		assert !Thread.holdsLock(lock) : "Thread darf nicht mehr owner des Locks sein.";
