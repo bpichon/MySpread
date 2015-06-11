@@ -156,7 +156,11 @@ public class Seat extends UnicastRemoteObject implements ISeat {
 				}
 			}
 			if (!successful) {
-				Thread.yield(); // TODO: oder sleep.
+				try {
+					Thread.sleep(20);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				} // TODO: oder yield
  			}
  		}
 
