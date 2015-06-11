@@ -192,6 +192,11 @@ public class Server extends UnicastRemoteObject implements IServer {
 				return;
 			}
 			
+			if (runningClientIds.isEmpty()) {
+				System.err.println("#### Der Server wurde beendet, da die verlorengegangenen Clients nicht wiederhergestellt werden konnten. ####");
+				System.exit(0);
+			}
+			
 			/* beschädigte Clients entfernen */
 			connectedClients.removeAll(damagedClients);
 			
