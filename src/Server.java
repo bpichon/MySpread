@@ -3,7 +3,9 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.Scanner;
+import java.util.TreeMap;
 
 public class Server extends UnicastRemoteObject implements IServer {
 
@@ -12,11 +14,15 @@ public class Server extends UnicastRemoteObject implements IServer {
 	 */
 	private static final long serialVersionUID = 7217773203069485717L;
 
+	ArrayList<IClient> connectedClients = new ArrayList<>();
+	
+	private SuperTableMaster superTableMaster;
+	
 	protected Server() throws RemoteException {
 		super();
+		superTableMaster = new SuperTableMaster();
+		superTableMaster.start();
 	}
-
-	ArrayList<IClient> connectedClients = new ArrayList<>();
 
 	public static void main(String... args) throws RemoteException {
 		Registry registry;
@@ -67,10 +73,19 @@ public class Server extends UnicastRemoteObject implements IServer {
 		for (IClient eachClient : connectedClients) {
 			eachClient.pause();
 		}
+		
+		// Clients Updaten
 		System.out.println("all Clients paused");
+		client.clearClients();
 		for (IClient eachClient : connectedClients) {
-			eachClient.updateClients(connectedClients);
+			eachClient.clearClients();
+			for (IClient paramClient : connectedClients) {
+				eachClient.addClient(paramClient);
+			}
+			eachClient.updateClients();
 		}
+		
+		// Weiterlaufen lassen
 		System.out.println("all Clients updated");
 		for (IClient eachClient : connectedClients) {
 			eachClient.resume();
@@ -78,5 +93,162 @@ public class Server extends UnicastRemoteObject implements IServer {
 		
 		System.out.println("all Clients resumed");
 		return true;
+	}
+	
+	@Override
+	public void recovery() throws RemoteException {
+		superTableMaster.setIsRecoveryMode();
+	}
+	
+	
+	
+
+	private class SuperTableMaster extends Thread {
+
+		private static final int MAX_EAT_COUNT_DIFF = 10;
+		private static final int interval = 1000;
+		private boolean isRecoveryMode = false;
+		public Map<Integer, IClientStats> allStats = new TreeMap<>();
+
+		public SuperTableMaster() {
+		}
+
+		public void collectStats() throws RemoteException {
+			final Map<Integer, IClientStats> currentClientStats = new TreeMap<Integer, IClientStats>();
+			for (int i = 0; i < connectedClients.size(); i++) {
+				final IClient client = connectedClients.get(i);
+				currentClientStats.put(client.getId(), client.getTableMaster().getStats());
+			}
+			// Erst am Ende ¸berschreiben, damit sichergestellt wird, dass der komplette letzte Stats da ist.
+			allStats = currentClientStats;
+		}
+		
+		private int calculate() throws RemoteException {
+			int globalMinimum = Integer.MAX_VALUE;
+			for (IClientStats stats : allStats.values()) {
+				for (Integer value : stats.getEatingCount()) {
+					globalMinimum = (value < globalMinimum) ? value : globalMinimum;
+				}
+			}
+			return globalMinimum;
+		}
+		
+		private void feedbackClients(int min) throws RemoteException {
+			final int greatedAllowedCount = min + MAX_EAT_COUNT_DIFF;
+			System.err.println("greatedAllowedCount: " + greatedAllowedCount);
+			for (IClientStats stats : allStats.values()) {
+				for (int i = 0; i < stats.getPhilosophers().size(); i++) {
+					final IPhilosopher currentPhilosopher = stats.getPhilosophers().get(i);
+					final Integer currentEatingCount = stats.getEatingCount().get(i);
+					System.err.print(currentPhilosopher.toMyString() + ": \t" + currentEatingCount);
+					if (currentEatingCount > greatedAllowedCount) {
+						System.out.println("\t locked");
+						stats.getClient().lock(currentPhilosopher);
+					} else {
+						System.err.println();
+					}
+				}
+			}
+		}
+		
+		@Override
+		public void run() {
+			System.out.println("supertablemaster runs");
+			while (!isInterrupted()) {
+				if (isRecoveryMode) {
+					try {
+						recovery();
+					} catch (RemoteException e) {
+						isRecoveryMode = true;
+					}
+				} else {
+					try {
+						sleep(interval);
+						collectStats();
+						int minmax = calculate();
+						feedbackClients(minmax);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					} catch (RemoteException e) {
+						// Client abgeschmiert.
+						e.printStackTrace();
+						isRecoveryMode = true;
+					}
+				}
+			}
+		}
+		
+		public void recovery() throws RemoteException {
+			/* Finde defekte(n) Client(s). */
+			System.out.println("###########RECOVERY MODE START############");
+			final ArrayList<Integer> runningClientIds = new ArrayList<>();
+			final ArrayList<IClient> damagedClients = new ArrayList<>();
+			for (IClient client : connectedClients) {
+				try {
+					runningClientIds.add(client.getId());
+				} catch (RemoteException re) {
+					damagedClients.add(client);
+				}
+			}
+			
+			if (damagedClients.isEmpty()) {
+				isRecoveryMode = false;
+				return;
+			}
+			
+			if (runningClientIds.isEmpty()) {
+				System.err.println("#### Der Server wurde beendet, da die verlorengegangenen Clients nicht wiederhergestellt werden konnten. ####");
+				System.exit(0);
+			}
+			
+			/* besch‰digte Clients entfernen */
+			connectedClients.removeAll(damagedClients);
+			
+			/* Alle anhalten */
+			for (IClient eachClient : connectedClients) {
+				eachClient.pause();
+			}
+			System.out.println("all Clients paused");
+			
+			/* Hole stats dieser Clients und bringe die Seats, Gabeln und Philosophen irgendwo anders unter. */
+			// Gleichm‰ﬂig auf Clients aufteilen.
+			for (Map.Entry<Integer, IClientStats> entry : allStats.entrySet()) {
+				if (!runningClientIds.contains(entry.getKey())) {
+					final IClientStats stats = entry.getValue();
+					final int damagedSeats = stats.getSeatCount();
+					final int damagedPhilosophs = stats.getPhilosophers().size();
+					for (int i = 0; i < damagedSeats; i++) {
+						connectedClients.get(i % connectedClients.size()).addSeat();
+					}
+
+					for (int i = 0; i < damagedPhilosophs; i++) {
+						connectedClients.get(i % connectedClients.size()).addPhilospher(stats.getEatingCount().get(i), stats.getEatingTimeFactor().get(i));
+					}
+				}
+			}
+			
+			/* Clients Updaten */
+			for (IClient eachClient : connectedClients) {
+				eachClient.clearClients();
+				for (IClient paramClient : connectedClients) {
+					eachClient.addClient(paramClient);
+				}
+				eachClient.updateClients();
+			}
+			System.out.println("all Clients updated");
+			
+			/* Weiterlaufen lassen */
+			for (IClient eachClient : connectedClients) {
+				eachClient.start();
+				eachClient.resume();
+			}
+			
+			System.out.println("###########RECOVERY MODE END############");
+			isRecoveryMode = false; // Und wieder in den Normalbetrieb ¸bergehen
+		}
+		
+		public void setIsRecoveryMode() {
+			isRecoveryMode = true;
+		}
 	}
 }

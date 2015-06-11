@@ -14,26 +14,36 @@ public class Client extends UnicastRemoteObject implements IClient {
 	private static final long serialVersionUID = -4568230290539841571L;
 
 	public IServer server;
+	
+	private TableMaster tableMaster;
 
 	private ArrayList<IClient> allClients = new ArrayList<>();
 	private ArrayList<IPhilosopher> philosophers = new ArrayList<>();
 	private ArrayList<IPhilosopher> suspendedPhilosophers = new ArrayList<>();
 	private ArrayList<ISeat> seats = new ArrayList<>();
+	private ArrayList<IFork> forks = new ArrayList<>();
 
 	private int id;
 
 	// Anpassung auf die übergebene Anzahl an Philosphen und Plätzen
 	public Client(int id, int philosopherAmount, int seatAmount)
 			throws RemoteException {
+		super();
 		this.id = id;
 		for (int i = 0; i < philosopherAmount; i++) {
 			philosophers.add(new Philosopher(this, i));
 		}
-		// TODO: seats erstellen
+		
 		for (int i = 0; i < seatAmount; i++) {
-			seats.add(new Seat(this, i));
+			forks.add(new Fork(this, i));
 		}
-		// TODO: gabeln erstellen
+		
+		for (int i = 0; i < seatAmount; i++) {
+			// Der letzte Seat bekommt als rechte Gabel eine null. Diese wird später in registerClient noch umgebogen.
+			seats.add((ISeat) new Seat(this, forks.get(i), ((i + 1) == seatAmount) ? null : forks.get(i + 1) ,i));
+		}
+		
+		tableMaster = new TableMaster(this);
 	};
 
 	/**
@@ -66,29 +76,44 @@ public class Client extends UnicastRemoteObject implements IClient {
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
-
 	}
 
-
 	@Override
-	public void updateClients(ArrayList<IClient> clients)
+	public void clearClients() throws RemoteException {
+		allClients.clear();
+	}
+	
+	@Override
+	public void addClient(IClient client) throws RemoteException {
+		allClients.add(client);
+	}
+	
+	@Override
+	public void updateClients()
 			throws RemoteException {
 
-		allClients = clients;
 		// Gabeln umbiegen
 		int indexRightNeighbor = (allClients.indexOf(this) + 1)
 				% allClients.size();
 		System.out.println("der gewählte rechte Nachbar ist "
-				+ allClients.get(indexRightNeighbor));
-		System.err.println("neue Anzahl: " + clients.size());
-		// TODO: Linke Gabel des rechten Nachbarns als rechte des letzten Sitzes verwenden 
+				+ allClients.get(indexRightNeighbor).toMyString());
+		System.err.println("neue Anzahl: " + allClients.size());
 		
+		// Linke Gabel des rechten Nachbarns als rechte des letzten Sitzes verwenden
+		IFork leftForkOfRightNeighbor = allClients.get(indexRightNeighbor).getSeat(0).getLeftFork(); // Linkester Sitz
+		getSeat(getSeats().size() - 1).setRightFork(leftForkOfRightNeighbor);
+		System.out.println("finished Update Client");
 	}
 
 	@Override
 	public void start() throws RemoteException {
 		for (IPhilosopher philosopher : philosophers) {
-			philosopher.start();
+			if (philosopher.getState() == Thread.State.NEW) {
+				philosopher.start();
+			}
+		}
+		if (tableMaster.getState() == Thread.State.NEW) {
+			tableMaster.start();
 		}
 	}
 
@@ -134,6 +159,7 @@ public class Client extends UnicastRemoteObject implements IClient {
 		synchronized (philosopher) {
 			suspendedPhilosophers.add(philosopher);
 			philosopher.wait();
+			System.out.println(philosopher + "Läuft wieder weiter.");
 		}
 	}
 
@@ -148,9 +174,67 @@ public class Client extends UnicastRemoteObject implements IClient {
 			try {
 				return this.getId() == ((IClient) other).getId();
 			} catch (RemoteException e) {
+				reportRemoteException(e);
 				return false;
 			}
 		}
 		return false;
+	}
+	
+	@Override
+	public String toMyString() throws RemoteException {
+		return toString();
+	}
+
+	@Override
+	public ISeat getSeat(int i) throws RemoteException {
+		return seats.get(i);
+	}
+
+	@Override
+	public ArrayList<IPhilosopher> getPhilosophers() throws RemoteException {
+		return philosophers;
+	}
+
+	@Override
+	public ITableMaster getTableMaster() throws RemoteException {
+		return tableMaster;
+	}
+
+	@Override
+	public void lock(IPhilosopher currentPhilosopher) throws RemoteException {
+		if (!currentPhilosopher.isLocked()) {
+			currentPhilosopher.lock();
+		}
+	}
+	
+	/**
+	 * Fügt einen neuen Stuhl und Gabeln ein. Verbiegt die entsprechenden Gabeln auch
+	 * @throws RemoteException
+	 */
+	@Override
+	public void addSeat() throws RemoteException {
+		// Es wird "rechts" eingefügt.
+		final ISeat leftNeighbor = seats.get(seats.size() - 1); // Rechtester Sitz -> Linker Nachbar des neuen Sitzes
+		final IFork newLeftFork = new Fork(this, forks.size());
+		forks.add(newLeftFork);
+		leftNeighbor.setRightFork(newLeftFork);
+		seats.add(new Seat(this, newLeftFork, null, seats.size()));
+	} 
+	
+	@Override
+	public void addPhilospher(int eatCount, int eatingTimeFactor) throws RemoteException {
+		philosophers.add(new Philosopher(this, philosophers.size(), eatingTimeFactor, eatCount));
+	}
+	
+	@Override
+	public void reportRemoteException(Exception e) {
+		try {
+			server.recovery();
+			e.printStackTrace();
+		} catch (RemoteException e1) {
+			e1.printStackTrace();
+			// Tue nichts.
+		}
 	}
 }

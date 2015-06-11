@@ -1,8 +1,8 @@
-import java.io.Serializable;
+import java.lang.Thread.State;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 
-public interface IPhilosopher extends Remote, Serializable {
+public interface IPhilosopher extends Remote {
 
 	public IClient getClient() throws RemoteException;
 
@@ -15,5 +15,15 @@ public interface IPhilosopher extends Remote, Serializable {
 	public int getMyId() throws RemoteException;
 
 	String toMyString() throws RemoteException;
+
+	public Integer getEatingCounter() throws RemoteException;
+
+	public Integer getEatingTimeFactor() throws RemoteException;
+
+	public void lock() throws RemoteException;
+
+	boolean isLocked() throws RemoteException;
+
+	public State getState() throws RemoteException;
 
 }

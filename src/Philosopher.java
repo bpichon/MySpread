@@ -1,7 +1,7 @@
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 
-public class Philosopher extends Thread implements IPhilosopher {
+public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Runnable {
 
 	/**
 	 * Serial-Id
@@ -11,12 +11,17 @@ public class Philosopher extends Thread implements IPhilosopher {
 	public static final int sleepingTime = 10;
 
 	public final int lockingTime = 10_000;
-	public final int meditatingTime = 1000;
-	public final int eatingTime = 1000;
+	public int meditatingTime = 100;
+	public int eatingTime = 10;
+	
+	public final int hunger;
+	
+	private Thread thread;
 	
 	private final int id;
 	private State state;
 	private boolean isSuspended = false;
+	private boolean isLocked = false;
 	
 
 	private final IClient client;
@@ -26,44 +31,65 @@ public class Philosopher extends Thread implements IPhilosopher {
 	private boolean cancelled = false;
 
 	public Philosopher(IClient client, int id) throws RemoteException {
+		this(client, id, 0);
+	}
+	
+	public Philosopher(IClient client, int id, int hunger) throws RemoteException {
+		this(client, id, hunger, 0);
+	}
+	
+	public Philosopher(IClient client, int id, int hunger, int eatCounter) throws RemoteException {
+		super();
 		this.client = client;
 		this.id = id;
+		this.eatCounter = eatCounter;
+		this.hunger = hunger;
+		eatingTime = eatingTime + hunger;
+		meditatingTime = (meditatingTime - hunger <= 0) ? 1 : meditatingTime - hunger;
 		this.seat = null;
 		state = State.SEARCHING;
-		UnicastRemoteObject.exportObject(this, 0);
+		thread = new Thread(this);
 	}
 
 	@Override
 	public void run() {
 		while (!cancelled) {
-			if (seat != null) {
-				// FIXME: remove me
-				throw new RuntimeException("WARUM??");
-			}
+			assert seat == null : "Zu dieser Zeit darf der Philosoph keinen Seat zugewiesen haben.";
 			State nextState = null;
+			
+			if (isLocked) {
+				// Client bzw Server haben diesen Philosophen gelockt.
+				state = State.LOCKED;
+			}
+			
 			if (state == State.SLEEPING) {
 				try {
-					sleep(sleepingTime);
+					Thread.sleep(sleepingTime);
 				} catch (InterruptedException e) {e.printStackTrace();}
 				nextState = State.SEARCHING;
 				
 			} else if (state == State.MEDITATING) {
 				try {
-					sleep(meditatingTime);
+					Thread.sleep(meditatingTime);
 				} catch (InterruptedException e) {e.printStackTrace();}
 				nextState = State.SEARCHING;
 				
 			} else if (state == State.LOCKED) {
 				try {
-					sleep(lockingTime);
+					Thread.sleep(lockingTime);
 				} catch (InterruptedException e) {e.printStackTrace();}
-				nextState = State.SEARCHING; // TODO: vllt auch waiting.
+				isLocked = false;
+				nextState = State.SEARCHING; // möglich auch State.WAITING.
 				
 			} else {
 				// nextState wird in der Methode (standUp) angegeben
 				try {
 					findSeatAndSit();
-				} catch (RemoteException e) {e.printStackTrace();}
+				} catch (RemoteException e) {try {
+					client.reportRemoteException(e);
+				} catch (RemoteException e1) {
+					e1.printStackTrace();
+				}}
 				// Der Philosoph kann nun zu essen anfangen.
 				eatAndStandUp();
 			}
@@ -83,6 +109,7 @@ public class Philosopher extends Thread implements IPhilosopher {
 			if (currentLength < 0) {
 				// der Philosoph hat sich hingestetzt.
 				seat = localSeat;
+				assert localSeat.getPhilosopher().equals(this) : "Philosoph wurde soeben zugewiesen, also muss er sich auch auf dem Stuhl befinden";
 				return;
 			} else if (currentLength < localShortestQueue) {
 				localShortestSeat = localSeat;
@@ -91,22 +118,31 @@ public class Philosopher extends Thread implements IPhilosopher {
 		}
 		
 		/* Einmal remote durch alle Clients und Sitze nach freien Plätzen suchen. */
-		for (IClient remoteClient : client.getAllClients()) {
+		for (int c = 0; c < client.getAllClients().size(); c++)
+		{
+			final IClient remoteClient = client.getAllClients().get(c);
 			if (remoteClient.equals(client)) continue;
-			for (ISeat remoteSeat : remoteClient.getSeats()) {
-				if (remoteSeat.tryToSitDown(this) < 0) {
+			for (int i = 0; i < remoteClient.getSeats().size(); i++) {
+				final ISeat remoteSeat = remoteClient.getSeat(i);
+				final int currentLength = remoteSeat.tryToSitDown(this);
+				if (currentLength < 0) {
+					// der Philosoph hat sich remote hingestetzt.
 					seat = remoteSeat;
+					assert this.equals(remoteSeat.getPhilosopher()) : "Dieser Sitz ist durch diesen Philosophen besetzt!";
 					return;
 				}
 			}
 		}
 		
+		assert seat == null : "Seat des Philosophen muss nach erfolgloser erster Suche null sein.";
+		assert localShortestSeat != null : "LocalShortestSeat kann nicht null sein.";
+		
 		/* An lokalen Sitz mit kürzester Schlange einreihen. */
 		localShortestSeat.sitOrWait(this); // kehrt erst zurück, wenn er tatsächlich am Platz SITZT
-		if (localShortestSeat.getPhilosopher() == null) {
-			// FIXME: remove me
-			throw new RuntimeException("WARUM??");
-		}
+		
+		assert localShortestSeat.getPhilosopher() != null : "Nachdem der Sitz besetzt wurde, kann der Philosoph auf dem Stuhl nicht 'null' sein!";
+		assert this.equals(localShortestSeat.getPhilosopher()) : "Nachdem der Sitz besetzt wurde, muss der Philosoph auf dem Stuhl dieser sein!";
+		
 		seat = localShortestSeat;
 		return; // Der Philosoph sitzt zu diesem Zeitpunkt garantiert an einem Sitz.
 	}
@@ -114,8 +150,29 @@ public class Philosopher extends Thread implements IPhilosopher {
 	private void eatAndStandUp() {
 		final State nextState;
 		checkSuspend();
+		do {
+			try {
+				seat.takeBothForks(); // Nachdem suspended wurde Gabeln wieder neu holen
+			} catch (RemoteException | NullPointerException e) {
+				// Wenn Seat null ist, war es ein entfernter Seat, der wegen Clientabsturz weggebrochen ist. 
+				try {
+					client.reportRemoteException(e);
+				} catch (RemoteException e1) {
+					e1.printStackTrace();
+				}
+			}
+		} while(checkSuspend());
 		try {
-			sleep(eatingTime); // isst
+			Thread.sleep(eatingTime); // isst
+			try {
+				System.out.println(this + " hat gerade gegessen. Auf Stuhl: " + seat.toMyString());
+			} catch (RemoteException | NullPointerException e) {
+				try {
+					client.reportRemoteException(e);
+				} catch (RemoteException e1) {
+					e1.printStackTrace();
+				}
+			}
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -128,7 +185,13 @@ public class Philosopher extends Thread implements IPhilosopher {
 		// Fertig gegessen, Stuhl kann wieder freigegeben werden.
 		try {
 			seat.standUp(this);
-		} catch (RemoteException e) {e.printStackTrace();}
+		} catch (RemoteException | NullPointerException e) {
+			try {
+				client.reportRemoteException(e);
+			} catch (RemoteException e1) {
+				e1.printStackTrace();
+			}
+		}
 		seat = null;
 		state = nextState;
 	}
@@ -136,9 +199,15 @@ public class Philosopher extends Thread implements IPhilosopher {
 	private boolean checkSuspend() {
 		if (isSuspended) {
 			try {
+				seat.releaseBothForks();
 				client.addSuspendedPhilosopher(this);
-			} catch (RemoteException | InterruptedException e) {
-				e.printStackTrace();
+			} catch (RemoteException | InterruptedException | NullPointerException e) {
+				try {
+					client.addSuspendedPhilosopher(this);
+					client.reportRemoteException(e);
+				} catch (RemoteException | InterruptedException e1) {
+					e1.printStackTrace();
+				}
 			}
 			return true;
 		}
@@ -161,6 +230,11 @@ public class Philosopher extends Thread implements IPhilosopher {
 		try {
 			clientId = client.getId();
 		} catch (RemoteException e) {
+			try {
+				client.reportRemoteException(e);
+			} catch (RemoteException e1) {
+				e1.printStackTrace();
+			}
 			clientId = -1;
 		}
 		
@@ -191,10 +265,50 @@ public class Philosopher extends Thread implements IPhilosopher {
 				return getClient().equals(otherPhilosopher.getClient()) 
 						&& getMyId() == otherPhilosopher.getMyId();
 			} catch (RemoteException e) {
+				try {
+					client.reportRemoteException(e);
+				} catch (RemoteException e1) {
+					e1.printStackTrace();
+				}
 				return false;
 			}
 		}
 		return false;
+	}
+
+	@Override
+	public void start() throws RemoteException {
+		thread.start();
+	}
+
+	@Override
+	public boolean isAlive() throws RemoteException {
+		return thread.isAlive();
+	}
+
+	@Override
+	public Integer getEatingCounter() throws RemoteException {
+		return eatCounter;
+	}
+
+	@Override
+	public Integer getEatingTimeFactor() throws RemoteException {
+		return hunger;
+	}
+
+	@Override
+	public void lock() throws RemoteException {
+		isLocked = true;
+	}
+	
+	@Override
+	public boolean isLocked() throws RemoteException {
+		return isLocked;
+	}
+
+	@Override
+	public Thread.State getState() throws RemoteException {
+		return thread.getState();
 	}
 
 }
