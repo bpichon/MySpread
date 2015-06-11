@@ -136,10 +136,12 @@ public class Server extends UnicastRemoteObject implements IServer {
 				for (int i = 0; i < stats.getPhilosophers().size(); i++) {
 					final IPhilosopher currentPhilosopher = stats.getPhilosophers().get(i);
 					final Integer currentEatingCount = stats.getEatingCount().get(i);
-					System.err.println(currentPhilosopher.toMyString() + ": \t" + currentEatingCount);
+					System.err.print(currentPhilosopher.toMyString() + ": \t" + currentEatingCount);
 					if (currentEatingCount > greatedAllowedCount) {
-						System.out.println("locked " + currentPhilosopher.toMyString());
+						System.out.println("\t locked");
 						stats.getClient().lock(currentPhilosopher);
+					} else {
+						System.err.println();
 					}
 				}
 			}

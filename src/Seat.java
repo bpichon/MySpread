@@ -73,11 +73,11 @@ public class Seat extends UnicastRemoteObject implements ISeat {
 	@Override
 	public boolean standUp(IPhilosopher philosopher) throws RemoteException {
 		synchronized (lock) {
+			lock.release();
 			this.philosopher = null;
 			System.out.println(philosopher.toMyString() + " ist gerade aufgestanden. | " + this);
-			
-			lock.release();
-			
+			boolean releasedBoth = releaseBothForks();
+			assert releasedBoth : "Beide Gabeln müssten released werden, weil beide Gabeln zuvor von diesem Sitz benutzt wurden.";
 		}
 		assert !Thread.holdsLock(lock) : "Thread darf nicht mehr owner des Locks sein.";
 		return true;
@@ -149,21 +149,35 @@ public class Seat extends UnicastRemoteObject implements ISeat {
 		boolean successful = false;
 		while(!successful) {
 			synchronized (forkMonitor) {
-				if (!leftFork.tryTake(this) || !rightFork.tryTake(this)) {
-					releaseBothForks();
+				if (id % 2 == 0) {
+					if (leftFork.tryTake(this)) {
+						if (rightFork.tryTake(this)) {
+							successful = true;
+						} else {
+							boolean released = leftFork.release(this);
+							assert released : "Linke Gabel nicht released, obwohl beide reserviert!";
+						}
+					}
 				} else {
-					successful = true;
+					if (rightFork.tryTake(this)) {
+						if (leftFork.tryTake(this)) {
+							successful = true;
+						} else {
+							boolean released = rightFork.release(this);
+							assert released : "Rechte Gabel nicht released, obwohl beide reserviert!";
+						}
+					}
 				}
 			}
 			if (!successful) {
-				try {
+				/*try {
 					Thread.sleep(20);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
-				} // TODO: oder yield
+				}*/
+				Thread.yield();
  			}
  		}
-
 	}
 	
 	/**

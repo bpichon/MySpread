@@ -12,4 +12,8 @@ public interface IFork extends Remote {
 	
 	int getId() throws RemoteException;
 
+	String toMyString() throws RemoteException;
+
+	//boolean tryTakeTimeout(ISeat seat) throws RemoteException;
+
 }

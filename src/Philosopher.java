@@ -111,7 +111,9 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 		}
 		
 		/* Einmal remote durch alle Clients und Sitze nach freien Plätzen suchen. */
-		for (IClient remoteClient : client.getAllClients()) {
+		for (int c = 0; c < client.getAllClients().size(); c++)
+		{
+			final IClient remoteClient = client.getAllClients().get(c);
 			if (remoteClient.equals(client)) continue;
 			for (int i = 0; i < remoteClient.getSeats().size(); i++) {
 				final ISeat remoteSeat = remoteClient.getSeat(i);
@@ -149,9 +151,6 @@ public class Philosopher extends UnicastRemoteObject implements IPhilosopher, Ru
 				e.printStackTrace();
 			}
 		} while(checkSuspend());
-		try {
-			seat.takeBothForks();
-		} catch (RemoteException e1) {e1.printStackTrace();}
 		try {
 			thread.sleep(eatingTime); // isst
 			try {

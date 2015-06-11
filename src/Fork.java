@@ -1,6 +1,7 @@
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 
 public class Fork extends UnicastRemoteObject implements IFork {
@@ -31,13 +32,36 @@ public class Fork extends UnicastRemoteObject implements IFork {
 	 */
 	@Override
 	public boolean tryTake(ISeat seat) throws RemoteException {
-		if (lock.tryAcquire()) {
-			this.seat = seat;
-			return true;
+		synchronized (lock) {
+			if (lock.tryAcquire()) {
+				this.seat = seat;
+				System.out.println(seat.toMyString() + " hat Fork reserviert: " + this.toString());
+				return true;
+			}
+			return false;
 		}
-		return false;
 	}
 	
+	/*
+	@Override
+	public boolean tryTakeTimeout(ISeat seat) throws RemoteException {
+		boolean success = false;
+		synchronized (lock) {
+			try {
+				success = lock.tryAcquire(1000, TimeUnit.MILLISECONDS);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+				return false;
+			}
+			if (success) {
+				this.seat = seat;
+				return true;
+			}
+		}
+		return false; 
+	}*/
+	
+
 	/**
 	 * Gibt die Gabel wieder frei, wenn der Seat auch der besetzende ist.
 	 * @param seat der besetzende Sitz
@@ -45,12 +69,16 @@ public class Fork extends UnicastRemoteObject implements IFork {
 	 */
 	@Override
 	public boolean release(ISeat seat) throws RemoteException {
+		synchronized (lock) { // TODO gegebstück
 		if (this.seat != null && this.seat.equals(seat)) {
-			lock.release();
+				lock.release();
+				System.out.println(seat.toMyString() + " hat Fork freigegeben: " + this.toString());
+				assert lock.availablePermits() == 1 : "Lock ist wieder frei.";
 			this.seat = null;
 			return true;
 		}
 		return false;
+		}
 	}
 	
 	@Override
@@ -63,6 +91,11 @@ public class Fork extends UnicastRemoteObject implements IFork {
 		}
 		
 		return "Fo("+id+")["+clientId+"]";
+	}
+	
+	@Override
+	public String toMyString() throws RemoteException {
+		return toString();
 	}
 	
 	@Override
